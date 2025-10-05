@@ -1028,9 +1028,17 @@ Widget _buildMealSizeOption(MealSize size) {
 double _calculateTotalPrice() {
     double total = widget.foodItem.effectivePrice; // Use effectivePrice instead of price
     
-    if (_selectedMealSize != null) {
+    if (_selectedMealSize != null && _selectedMealSize!.additionalPrice<=0) {
       total += _selectedMealSize!.additionalPrice;
     }
+    else if(_selectedMealSize != null){
+            total = _selectedMealSize!.additionalPrice;
+
+    }
+    else{
+      total=total;
+    }
+    
     
     for (var extra in _selectedExtras) {
       total += extra.price;

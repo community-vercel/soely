@@ -9,6 +9,8 @@ class HomeProvider extends ChangeNotifier {
   List<FoodCategory> _categories = [];
   List<FoodItem> _featuredItems = [];
   List<FoodItem> _popularItems = [];
+   List<FoodItem> _featuredItem = [];
+  List<FoodItem> _popularItem = [];
   bool _isLoading = false;
   String? _error;
 
@@ -16,6 +18,8 @@ class HomeProvider extends ChangeNotifier {
   List<FoodCategory> get categories => _categories;
   List<FoodItem> get featuredItems => _featuredItems;
   List<FoodItem> get popularItems => _popularItems;
+   List<FoodItem> get featuredItem => _featuredItem;
+  List<FoodItem> get popularItem => _popularItem;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -39,6 +43,8 @@ class HomeProvider extends ChangeNotifier {
         _loadCategories(),
         _loadFeaturedItems(),
         _loadPopularItems(),
+        _loadFeaturedItem(),
+        _loadPopularItem(),
       ]);
 
       final categoriesSuccess = results[0] as bool;
@@ -77,7 +83,7 @@ class HomeProvider extends ChangeNotifier {
 
   Future<bool> _loadFeaturedItems() async {
     try {
-      final response = await _apiService.getFoodItems(featured: true, limit: 6);
+      final response = await _apiService.getFoodItems(featured: true, limit: 10);
       if (response.isSuccess && response.data != null) {
         _featuredItems = response.data!;
         return true;
@@ -93,9 +99,41 @@ class HomeProvider extends ChangeNotifier {
 
   Future<bool> _loadPopularItems() async {
     try {
-      final response = await _apiService.getFoodItems(popular: true, limit: 4);
+      final response = await _apiService.getFoodItems(popular: true, limit: 10);
       if (response.isSuccess && response.data != null) {
         _popularItems = response.data!;
+        return true;
+      } else {
+        debugPrint('Failed to load popular items: ${response.error}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Error loading popular items: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _loadFeaturedItem() async {
+    try {
+      final response = await _apiService.getFoodItems(featured: true, limit: 100);
+      if (response.isSuccess && response.data != null) {
+        _featuredItem = response.data!;
+        return true;
+      } else {
+        debugPrint('Failed to load featured items: ${response.error}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Error loading featured items: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _loadPopularItem() async {
+    try {
+      final response = await _apiService.getFoodItems(popular: true, limit: 100);
+      if (response.isSuccess && response.data != null) {
+        _popularItem = response.data!;
         return true;
       } else {
         debugPrint('Failed to load popular items: ${response.error}');

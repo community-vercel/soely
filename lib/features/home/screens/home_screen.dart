@@ -62,17 +62,12 @@ class _HomeScreenState extends State<HomeScreen> {
             SnackBar(
               content: Text(
                 'Press back again to exit',
-                style: GoogleFonts.poppins(
-                  fontSize: 14.sp,
-                  color: Colors.white,
-                ),
+                style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.white),
               ),
               duration: const Duration(seconds: 2),
               backgroundColor: AppColors.textDark,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
               margin: EdgeInsets.all(16.r),
             ),
           );
@@ -105,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   final screenWidth = constraints.maxWidth;
       
                   return SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
+                    physics: const ClampingScrollPhysics(),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -123,39 +118,43 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   if (isWeb) SizedBox(height: 32.h) else SizedBox(height: 16.h),
       
-                                  // Mobile-only search bar
                                   if (!isWeb) ...[
                                     SizedBox(height: 16.h),
                                     const SearchBarWidget(),
                                     SizedBox(height: 24.h),
                                   ],
       
-                                  // Promotional Banners
                                   DynamicPromotionalBanner(),
                                   SizedBox(height: isWeb ? 40.h : 24.h),
       
-                                  // Categories Section
                                   _buildSectionHeader(
                                     AppStrings.ourMenu,
                                     isWeb: isWeb,
-                                    onViewAll: () => context.push(AppRoutes.menu),
+                                    onViewAll: () => context.go(AppRoutes.menu),
                                   ),
                                   SizedBox(height: isWeb ? 24.h : 16.h),
-                                  buildCategoriesSlider(provider, context,isWeb),
+                                  buildCategoriesSlider(provider, context, isWeb),
                                   SizedBox(height: isWeb ? 48.h : 24.h),
       
-                                  // Featured Items
-                                  _buildSectionHeader(AppStrings.featuredItems, isWeb: isWeb),
+                                  // FEATURED ITEMS WITH VIEW ALL
+                                  _buildSectionHeader(
+                                    AppStrings.featuredItems,
+                                    isWeb: isWeb,
+                                    onViewAll: () => _navigateToFeaturedPage(context, provider),
+                                  ),
                                   SizedBox(height: isWeb ? 24.h : 16.h),
                                   _buildFeaturedItems(provider, isSmallScreen, isTablet, isDesktop),
                                   SizedBox(height: isWeb ? 48.h : 24.h),
       
-                                  // Offers Section
                                   const OffersSection(),
                                   SizedBox(height: isWeb ? 48.h : 24.h),
       
-                                  // Popular Items
-                                  _buildSectionHeader(AppStrings.mostPopularItems, isWeb: isWeb),
+                                  // POPULAR ITEMS WITH VIEW ALL
+                                  _buildSectionHeader(
+                                    AppStrings.mostPopularItems,
+                                    isWeb: isWeb,
+                                    onViewAll: () => _navigateToPopularPage(context, provider),
+                                  ),
                                   SizedBox(height: isWeb ? 24.h : 16.h),
                                   _buildPopularItems(provider, isSmallScreen, isTablet, isDesktop),
                                   SizedBox(height: isWeb ? 64.h : 32.h),
@@ -165,7 +164,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
       
-                        // Full-width footer for web
                         if (isWeb)
                           Container(
                             width: double.infinity,
@@ -182,11 +180,35 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // Navigate to Featured Items Page
+  void _navigateToFeaturedPage(BuildContext context, HomeProvider provider) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FeaturedItemsPage(
+          featuredItems: provider.featuredItem,
+        ),
+      ),
+    );
+  }
+
+  // Navigate to Popular Items Page
+  void _navigateToPopularPage(BuildContext context, HomeProvider provider) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PopularItemsPage(
+          popularItems: provider.popularItem,
+        ),
+      ),
+    );
+  }
  
   double _getHorizontalPadding(bool isSmallScreen, bool isTablet, bool isDesktop) {
     if (isSmallScreen) return 16.w;
     if (isTablet) return 40.w;
-    return 60.w; // Desktop - increased for better whitespace
+    return 60.w;
   }
 
   PreferredSizeWidget _buildMobileAppBar() {
@@ -196,18 +218,12 @@ class _HomeScreenState extends State<HomeScreen> {
       automaticallyImplyLeading: false,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildLogo(context) 
-        ],
+        children: [_buildLogo(context)],
       ),
       actions: [
         IconButton(
           onPressed: () {},
-          icon: Icon(
-            Icons.notifications_outlined,
-            color: AppColors.textDark,
-            size: 24.sp,
-          ),
+          icon: Icon(Icons.notifications_outlined, color: AppColors.textDark, size: 24.sp),
         ),
       ],
     );
@@ -221,10 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Hero(
           tag: 'app_logo',
           child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: 48.h,
-              maxWidth: 140.w,
-            ),
+            constraints: BoxConstraints(maxHeight: 48.h, maxWidth: 140.w),
             child: AspectRatio(
               aspectRatio: 3,
               child: Image.asset(
@@ -270,10 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 4.h,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        AppColors.primary,
-                        AppColors.primary.withOpacity(0.5),
-                      ],
+                      colors: [AppColors.primary, AppColors.primary.withOpacity(0.5)],
                     ),
                     borderRadius: BorderRadius.circular(2.r),
                   ),
@@ -301,9 +311,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ) : null,
                   boxShadow: isWeb ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
                     ),
                   ] : null,
                 ),
@@ -312,19 +322,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       AppStrings.viewAll,
                       style: TextStyle(
-                        fontSize: isWeb ? 16.sp : 18.sp,
+                        fontSize: isWeb ? 16.sp : 14.sp,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primary,
                       ),
                     ),
-                    if (isWeb) ...[
-                      SizedBox(width: 6.w),
-                      Icon(
-                        Icons.arrow_forward,
-                        size: 18.sp,
-                        color: AppColors.primary,
-                      ),
-                    ],
+                    SizedBox(width: 6.w),
+                    Icon(
+                      Icons.arrow_forward,
+                      size: isWeb ? 18.sp : 16.sp,
+                      color: AppColors.primary,
+                    ),
                   ],
                 ),
               ),
@@ -346,13 +354,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     int crossAxisCount = isSmallScreen ? 2 : (isTablet ? 3 : 5);
     double childAspectRatio = isSmallScreen ? 0.75 : (isTablet ? 0.8 : 0.75);
-
     int maxItems = isSmallScreen ? 4 : (isTablet ? 6 : 10);
     int itemCount = provider.featuredItems.length > maxItems ? maxItems : provider.featuredItems.length;
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      addAutomaticKeepAlives: false,
+      addRepaintBoundaries: true,
+      cacheExtent: 0,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: isSmallScreen ? 8.w : (isTablet ? 16.w : 20.w),
@@ -362,11 +372,12 @@ class _HomeScreenState extends State<HomeScreen> {
       itemCount: itemCount,
       itemBuilder: (context, index) {
         final item = provider.featuredItems[index];
-        return FoodItemCard(
-          foodItem: item,
-          onTap: () {
-            context.push(AppRoutes.foodDetail, extra: item);
-          },
+        return RepaintBoundary(
+          child: FoodItemCard(
+            key: ValueKey('featured_${item.id}'),
+            foodItem: item,
+            onTap: () => context.push(AppRoutes.foodDetail, extra: item),
+          ),
         );
       },
     );
@@ -387,10 +398,12 @@ class _HomeScreenState extends State<HomeScreen> {
     int crossAxisCount = isSmallScreen ? 2 : (isTablet ? 3 : 5);
     double childAspectRatio = isSmallScreen ? 0.75 : (isTablet ? 0.8 : 0.75);
 
-    
-  return GridView.builder(
+    return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      addAutomaticKeepAlives: false,
+      addRepaintBoundaries: true,
+      cacheExtent: 0,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: isSmallScreen ? 8.w : (isTablet ? 16.w : 20.w),
@@ -400,14 +413,210 @@ class _HomeScreenState extends State<HomeScreen> {
       itemCount: itemCount,
       itemBuilder: (context, index) {
         final item = provider.popularItems[index];
-        return FoodItemCard(
-          foodItem: item,
-          onTap: () {
-            context.push(AppRoutes.foodDetail, extra: item);
-          },
+        return RepaintBoundary(
+          child: FoodItemCard(
+            key: ValueKey('popular_${item.id}'),
+            foodItem: item,
+            onTap: () => context.push(AppRoutes.foodDetail, extra: item),
+          ),
         );
       },
     );
-   
+  }
+}
+
+// FEATURED ITEMS PAGE
+class FeaturedItemsPage extends StatelessWidget {
+  final List featuredItems;
+
+  const FeaturedItemsPage({
+    super.key,
+    required this.featuredItems,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = _getCrossAxisCount(screenWidth);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text(
+          'Featured Items',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textDark,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        iconTheme: const IconThemeData(color: AppColors.textDark),
+      ),
+      body: featuredItems.isEmpty
+          ? _buildEmptyState('Featured')
+          : GridView.builder(
+              padding: EdgeInsets.all(16.w),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                childAspectRatio: _getAspectRatio(screenWidth),
+                crossAxisSpacing: 12.w,
+                mainAxisSpacing: 12.h,
+              ),
+              itemCount: featuredItems.length,
+              itemBuilder: (context, index) {
+                return FoodItemCard(
+                  foodItem: featuredItems[index],
+                  onTap: () {
+                    context.push(AppRoutes.foodDetail, extra: featuredItems[index]);
+                  },
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildEmptyState(String type) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.star_border,
+            size: 80.sp,
+            color: AppColors.textLight,
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            'No $type Items',
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'Check back later for $type items',
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: AppColors.textLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _getCrossAxisCount(double screenWidth) {
+    if (screenWidth >= 1200) return 5;
+    if (screenWidth >= 900) return 4;
+    if (screenWidth >= 600) return 3;
+    return 2;
+  }
+
+  double _getAspectRatio(double screenWidth) {
+    if (screenWidth >= 1200) return 0.7;
+    if (screenWidth >= 900) return 0.72;
+    if (screenWidth >= 600) return 0.75;
+    return 0.68;
+  }
+}
+
+// POPULAR ITEMS PAGE
+class PopularItemsPage extends StatelessWidget {
+  final List popularItems;
+
+  const PopularItemsPage({
+    super.key,
+    required this.popularItems,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = _getCrossAxisCount(screenWidth);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text(
+          'Popular Items',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textDark,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        iconTheme: const IconThemeData(color: AppColors.textDark),
+      ),
+      body: popularItems.isEmpty
+          ? _buildEmptyState('Popular')
+          : GridView.builder(
+              padding: EdgeInsets.all(16.w),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                childAspectRatio: _getAspectRatio(screenWidth),
+                crossAxisSpacing: 12.w,
+                mainAxisSpacing: 12.h,
+              ),
+              itemCount: popularItems.length,
+              itemBuilder: (context, index) {
+                return FoodItemCard(
+                  foodItem: popularItems[index],
+                  onTap: () {
+                    context.push(AppRoutes.foodDetail, extra: popularItems[index]);
+                  },
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildEmptyState(String type) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.trending_up,
+            size: 80.sp,
+            color: AppColors.textLight,
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            'No $type Items',
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'Check back later for $type items',
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: AppColors.textLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _getCrossAxisCount(double screenWidth) {
+    if (screenWidth >= 1200) return 5;
+    if (screenWidth >= 900) return 4;
+    if (screenWidth >= 600) return 3;
+    return 2;
+  }
+
+  double _getAspectRatio(double screenWidth) {
+    if (screenWidth >= 1200) return 0.7;
+    if (screenWidth >= 900) return 0.72;
+    if (screenWidth >= 600) return 0.75;
+    return 0.68;
   }
 }

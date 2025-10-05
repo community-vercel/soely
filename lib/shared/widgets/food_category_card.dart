@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:soely/core/routes/app_routes.dart';
 import 'package:soely/features/providers/home_provider.dart';
 import 'package:soely/shared/models/food_category.dart';
 
-// Modern, professional category card with enhanced animations
-class FoodCategoryCard extends StatefulWidget {
+// Optimized category card without animations
+class FoodCategoryCard extends StatelessWidget {
   final FoodCategory category;
   final VoidCallback onTap;
   final int index;
@@ -21,192 +20,117 @@ class FoodCategoryCard extends StatefulWidget {
   });
 
   @override
-  State<FoodCategoryCard> createState() => _FoodCategoryCardState();
-}
-
-class _FoodCategoryCardState extends State<FoodCategoryCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
-  bool _isPressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-
-    _fadeAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.8,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-
-    Future.delayed(Duration(milliseconds: widget.index * 100), () {
-      if (mounted) {
-        setState(() {});
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  void _onTapDown(TapDownDetails details) {
-    setState(() => _isPressed = true);
-    _animationController.forward();
-  }
-
-  void _onTapUp(TapUpDetails details) {
-    setState(() => _isPressed = false);
-    _animationController.reverse();
-    widget.onTap();
-  }
-
-  void _onTapCancel() {
-    setState(() => _isPressed = false);
-    _animationController.reverse();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final colorScheme = _getCategoryColorScheme(widget.category.name);
+    final colorScheme = _getCategoryColorScheme(category.name);
     final cardWidth = _isWeb(context) ? 120.w : 100.w;
-    final iconSize = _isWeb(context) ? 90.w : 80.w; // Reduced icon size for web
-    final fontSize = _isWeb(context) ? 14.sp : 13.sp; // Slightly reduced font size
+    final iconSize = _isWeb(context) ? 90.w : 80.w;
+    final fontSize = _isWeb(context) ? 14.sp : 13.sp;
 
-    return AnimatedBuilder(
-      animation: _animationController,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _scaleAnimation.value,
-          child: Opacity(
-            opacity: _fadeAnimation.value,
-            child: GestureDetector(
-              onTapDown: _onTapDown,
-              onTapUp: _onTapUp,
-              onTapCancel: _onTapCancel,
-              child: Container(
-                width: cardWidth,
-                margin: EdgeInsets.only(right: _isWeb(context) ? 20.w : 16.w),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: iconSize,
-                      height: iconSize,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            colorScheme.primary,
-                            colorScheme.secondary,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(24.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: colorScheme.primary.withOpacity(0.4),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                            spreadRadius: -4,
-                          ),
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.1),
-                            blurRadius: 1,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24.r),
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.white.withOpacity(0.2),
-                                  Colors.white.withOpacity(0.05),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Center(child: _buildIcon(iconSize)),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: _isWeb(context) ? 12.h : 12.h), // Reduced spacing
-                    Container(
-                      width: cardWidth,
-                      constraints: BoxConstraints(maxHeight: 40.h), // Limit text height
-                      child: Text(
-                        widget.category.name,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF2D3748),
-                          height: 1.2, // Tighter line height
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    ),
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Container(
+        width: cardWidth,
+        margin: EdgeInsets.only(right: _isWeb(context) ? 20.w : 16.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: iconSize,
+              height: iconSize,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.primary,
+                    colorScheme.secondary,
                   ],
+                ),
+                borderRadius: BorderRadius.circular(24.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withOpacity(0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                    spreadRadius: -4,
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.1),
+                    blurRadius: 1,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24.r),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withOpacity(0.2),
+                          Colors.white.withOpacity(0.05),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Center(child: _buildIcon(iconSize, context)),
+                ],
+              ),
+            ),
+            SizedBox(height: _isWeb(context) ? 12.h : 12.h),
+            Container(
+              width: cardWidth,
+              constraints: BoxConstraints(maxHeight: 40.h),
+              child: Text(
+                category.name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF2D3748),
+                  height: 1.2,
+                  letterSpacing: -0.2,
                 ),
               ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildIcon(double iconSize) {
-    if (widget.category.imageUrl.startsWith('http')) {
+  Widget _buildIcon(double iconSize, BuildContext context) {
+    if (category.imageUrl.startsWith('http')) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(24.r),
         child: Image.network(
-        widget.category.imageUrl,
+          category.imageUrl,
           width: iconSize,
           height: iconSize,
           fit: BoxFit.cover,
-        
         ),
       );
     }
-    return _buildIconFallback(iconSize);
+    return _buildIconFallback(iconSize, context);
   }
 
-  Widget _buildIconFallback(double iconSize) {
-    return Container(
+  Widget _buildIconFallback(double iconSize, BuildContext context) {
+    return SizedBox(
       width: iconSize,
       height: iconSize,
       child: Center(
         child: Text(
-          widget.category.icon,
+          category.icon,
           style: TextStyle(
-            fontSize: _isWeb(context) ? 36.sp : 32.sp, // Adjusted icon font size
+            fontSize: _isWeb(context) ? 36.sp : 32.sp,
             color: Colors.white,
             fontWeight: FontWeight.w500,
           ),
@@ -269,10 +193,11 @@ class CategoryColorScheme {
   });
 }
 
-// Enhanced categories slider with section header
+// Categories slider
 Widget buildCategoriesSlider(
   HomeProvider provider,
-  BuildContext context, bool isWeb,
+  BuildContext context,
+  bool isWeb,
 ) {
   if (provider.categories.isEmpty) {
     return const SizedBox.shrink();
@@ -284,7 +209,7 @@ Widget buildCategoriesSlider(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          height: _isWeb(context) ? 180.h : 130.h, // Increased height for web
+          height: _isWeb(context) ? 180.h : 130.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: _isWeb(context) ? 2.w : 2.w),
@@ -297,7 +222,7 @@ Widget buildCategoriesSlider(
                 index: index,
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  context.push(AppRoutes.menu, extra: {'category': category.id});
+                  context.go(AppRoutes.menu, extra: {'category': category.id});
                 },
               );
             },
@@ -310,4 +235,13 @@ Widget buildCategoriesSlider(
 
 bool _isWeb(BuildContext context) {
   return MediaQuery.of(context).size.width > 600;
+
+
+
+
+
+
+
+
+
 }

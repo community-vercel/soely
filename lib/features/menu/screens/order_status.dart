@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:soely/core/constant/app_colors.dart';
@@ -35,15 +34,48 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
     });
   }
 
+  // Responsive breakpoints
+  static const double mobileBreakpoint = 600;
+  static const double tabletBreakpoint = 900;
+  static const double desktopBreakpoint = 1200;
+
+  // Responsive getters
+  double get screenWidth => MediaQuery.of(context).size.width;
+  
+  bool get isMobile => screenWidth < mobileBreakpoint;
+  bool get isTablet => screenWidth >= mobileBreakpoint && screenWidth < desktopBreakpoint;
+  bool get isDesktop => screenWidth >= desktopBreakpoint;
+
+  double get contentMaxWidth {
+    if (screenWidth >= 1400) return 1400;
+    if (isDesktop) return 1200;
+    return double.infinity;
+  }
+
+  double get horizontalPadding {
+    if (screenWidth >= 1400) return 48;
+    if (isDesktop) return 32;
+    if (isTablet) return 24;
+    return 16;
+  }
+
+  double get verticalPadding {
+    if (isDesktop) return 40;
+    if (isTablet) return 32;
+    return 20;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: null,
+      appBar: _buildAppBar(),
       body: Consumer<OrderProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
           if (provider.error != null || provider.currentOrder == null) {
@@ -51,40 +83,24 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
           }
 
           final order = provider.currentOrder!;
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                SizedBox(height: 16.h),
-                
-                // Order Header
-                _buildOrderHeader(order),
-                SizedBox(height: 24.h),
-                
-                // Estimated Delivery Time
-                _buildDeliveryTime(order),
-                SizedBox(height: 24.h),
-                
-                // Order Progress
-                _buildOrderProgress(order),
-                SizedBox(height: 24.h),
-                
-                // Restaurant Info
-                _buildRestaurantInfo(order),
-                SizedBox(height: 24.h),
-                
-                // Payment Info
-                _buildPaymentInfo(order),
-                SizedBox(height: 24.h),
-                
-                // Order Details
-                _buildOrderDetails(order),
-                SizedBox(height: 100.h),
-              ],
+          
+          return Center(
+            child: Container(
+              constraints: BoxConstraints(maxWidth: contentMaxWidth),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: verticalPadding,
+                ),
+                child: isDesktop 
+                    ? _buildDesktopLayout(order) 
+                    : _buildMobileTabletLayout(order),
+              ),
             ),
           );
         },
       ),
-      bottomNavigationBar: _buildBottomBar(),
+      bottomNavigationBar: isMobile ? _buildBottomBar() : null,
     );
   }
 
@@ -92,85 +108,209 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
+      centerTitle: true,
       leading: IconButton(
         onPressed: () => context.go(AppRoutes.home),
         icon: Icon(
-          Icons.arrow_back_ios,
+          Icons.arrow_back_ios_new_rounded,
           color: AppColors.textDark,
-          size: 20.sp,
+          size: 20,
         ),
       ),
       title: Text(
         AppStrings.orderStatus,
         style: TextStyle(
-          fontSize: 20.sp,
+          fontSize: isDesktop ? 24 : 20,
           fontWeight: FontWeight.w600,
           color: AppColors.textDark,
+          letterSpacing: -0.5,
         ),
       ),
+      actions: isDesktop ? [
+        Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: TextButton.icon(
+            onPressed: () => context.go(AppRoutes.home),
+            icon: const Icon(Icons.home_outlined, size: 20),
+            label: Text(
+              AppStrings.home,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+          ),
+        ),
+      ] : null,
+    );
+  }
+
+  Widget _buildDesktopLayout(Order order) {
+    return Column(
+      children: [
+        // Header section
+        _buildOrderHeader(order),
+        const SizedBox(height: 40),
+        
+        // Main content in two columns
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left column: Progress and delivery info
+            Expanded(
+              flex: 3,
+              child: Column(
+                children: [
+                  _buildDeliveryTime(order),
+                  const SizedBox(height: 32),
+                  _buildOrderProgress(order),
+                ],
+              ),
+            ),
+            
+            const SizedBox(width: 40),
+            
+            // Right column: Restaurant, payment, and order details
+            Expanded(
+              flex: 2,
+              child: Column(
+                children: [
+                  _buildRestaurantInfo(order),
+                  const SizedBox(height: 24),
+                  _buildPaymentInfo(order),
+                  const SizedBox(height: 24),
+                  _buildOrderDetails(order),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: CustomButton(
+                      text: AppStrings.home,
+                      onPressed: () => context.go(AppRoutes.home),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  Widget _buildMobileTabletLayout(Order order) {
+    return Column(
+      children: [
+        _buildOrderHeader(order),
+        const SizedBox(height: 24),
+        _buildDeliveryTime(order),
+        const SizedBox(height: 24),
+        _buildOrderProgress(order),
+        const SizedBox(height: 24),
+        _buildRestaurantInfo(order),
+        const SizedBox(height: 24),
+        _buildPaymentInfo(order),
+        const SizedBox(height: 24),
+        _buildOrderDetails(order),
+        SizedBox(height: isMobile ? 100 : 40),
+      ],
     );
   }
 
   Widget _buildErrorState(String error) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 64.sp,
-            color: AppColors.error,
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            error,
-            style: TextStyle(
-              fontSize: 16.sp,
-              color: AppColors.textDark,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 80,
+              color: AppColors.error,
             ),
-          ),
-          SizedBox(height: 16.h),
-          CustomButton(
-            text: 'Go Back',
-            onPressed: () => context.go(AppRoutes.home),
-            width: 200.w,
-          ),
-        ],
+            const SizedBox(height: 24),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                color: AppColors.textDark,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: 200,
+              child: CustomButton(
+                text: 'Go Back',
+                onPressed: () => context.go(AppRoutes.home),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildOrderHeader(Order order) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(isDesktop ? 32 : (isTablet ? 28 : 24)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
-          Text(
-            'Order ID: #${order.id.toUpperCase()}',
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primary,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.receipt_long_rounded,
+                  color: AppColors.primary,
+                  size: isDesktop ? 32 : 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Flexible(
+                child: Text(
+                  'Order #${order.id.toUpperCase()}',
+                  style: TextStyle(
+                    fontSize: isDesktop ? 28 : (isTablet ? 24 : 20),
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                    letterSpacing: -0.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 8.h),
+          const SizedBox(height: 12),
           Text(
             _formatDate(order.createdAt),
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: isDesktop ? 16 : 14,
               color: AppColors.textLight,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -180,48 +320,77 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
 
   Widget _buildDeliveryTime(Order order) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(isDesktop ? 48 : (isTablet ? 40 : 32)),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [AppColors.primary, AppColors.primaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.4),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Text(
             AppStrings.estimatedDelivery,
             style: TextStyle(
-              fontSize: 14.sp,
-              color: Colors.white.withOpacity(0.8),
+              fontSize: isDesktop ? 18 : 16,
+              color: Colors.white.withOpacity(0.95),
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
             ),
           ),
-          SizedBox(height: 8.h),
+          const SizedBox(height: 16),
           Text(
             '40 min',
             style: TextStyle(
-              fontSize: 32.sp,
-              fontWeight: FontWeight.w700,
+              fontSize: isDesktop ? 64 : (isTablet ? 56 : 48),
+              fontWeight: FontWeight.w800,
               color: Colors.white,
+              letterSpacing: -2,
+              height: 1,
             ),
           ),
-          SizedBox(height: 16.h),
+          const SizedBox(height: 20),
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 12,
+            ),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Text(
-              AppStrings.getYourOrder,
-              style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 1,
               ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.schedule_rounded,
+                  color: Colors.white,
+                  size: isDesktop ? 20 : 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  AppStrings.getYourOrder,
+                  style: TextStyle(
+                    fontSize: isDesktop ? 15 : 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -231,21 +400,48 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
 
   Widget _buildOrderProgress(Order order) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(isDesktop ? 36 : (isTablet ? 32 : 28)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.local_shipping_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Order Progress',
+                style: TextStyle(
+                  fontSize: isDesktop ? 22 : (isTablet ? 20 : 18),
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: isDesktop ? 36 : 32),
           _buildProgressStep(
             AppStrings.orderPlaced,
             true,
@@ -260,8 +456,8 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             order.status.index >= OrderStatus.preparing.index,
           ),
           _buildProgressStep(
-            AppStrings.outForDelivery,
-            order.status.index >= OrderStatus.outForDelivery.index,
+            AppStrings.ready,
+            order.status.index >= OrderStatus.ready.index,
           ),
           _buildProgressStep(
             AppStrings.delivered,
@@ -274,55 +470,85 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
   }
 
   Widget _buildProgressStep(String title, bool isCompleted, {bool isFirst = false, bool isLast = false}) {
+    const double iconSize = 32;
+    const double lineHeight = 40;
+    
     return Row(
       children: [
-        // Progress Indicator
         Column(
           children: [
             if (!isFirst)
               Container(
-                width: 2.w,
-                height: 20.h,
-                color: isCompleted ? AppColors.primary : AppColors.border,
+                width: 3,
+                height: lineHeight,
+                decoration: BoxDecoration(
+                  gradient: isCompleted
+                      ? LinearGradient(
+                          colors: [AppColors.primary, AppColors.primaryDark],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        )
+                      : null,
+                  color: isCompleted ? null : AppColors.border,
+                ),
               ),
             Container(
-              width: 20.w,
-              height: 20.h,
+              width: iconSize,
+              height: iconSize,
               decoration: BoxDecoration(
-                color: isCompleted ? AppColors.primary : Colors.white,
+                gradient: isCompleted
+                    ? LinearGradient(
+                        colors: [AppColors.primary, AppColors.primaryDark],
+                      )
+                    : null,
+                color: isCompleted ? null : Colors.white,
                 border: Border.all(
-                  color: isCompleted ? AppColors.primary : AppColors.border,
-                  width: 2,
+                  color: isCompleted ? Colors.transparent : AppColors.border,
+                  width: 2.5,
                 ),
                 shape: BoxShape.circle,
+                boxShadow: isCompleted ? [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ] : null,
               ),
               child: isCompleted
                   ? Icon(
-                      Icons.check,
+                      Icons.check_rounded,
                       color: Colors.white,
-                      size: 12.sp,
+                      size: 18,
                     )
                   : null,
             ),
             if (!isLast)
               Container(
-                width: 2.w,
-                height: 20.h,
-                color: isCompleted ? AppColors.primary : AppColors.border,
+                width: 3,
+                height: lineHeight,
+                decoration: BoxDecoration(
+                  gradient: isCompleted
+                      ? LinearGradient(
+                          colors: [AppColors.primary, AppColors.primaryDark],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        )
+                      : null,
+                  color: isCompleted ? null : AppColors.border,
+                ),
               ),
           ],
         ),
-        
-        SizedBox(width: 16.w),
-        
-        // Step Title
+        const SizedBox(width: 24),
         Expanded(
           child: Text(
             title,
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: isDesktop ? 16 : 15,
               fontWeight: isCompleted ? FontWeight.w600 : FontWeight.w500,
               color: isCompleted ? AppColors.textDark : AppColors.textLight,
+              letterSpacing: 0.2,
             ),
           ),
         ),
@@ -330,160 +556,222 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
     );
   }
 
-Widget _buildRestaurantInfo(Order order) {
-  // Phone number for the restaurant
-  const String phoneNumber = '+34932112072'; // Use the provided phone number
+  Widget _buildRestaurantInfo(Order order) {
+    const String phoneNumber = '+34932112072';
 
-  // Function to initiate a phone call
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
-    try {
-      if (await canLaunchUrl(phoneUri)) {
-        await launchUrl(phoneUri);
-      } else {
-        // Show an error message if the call cannot be launched
+    Future<void> makePhoneCall(String phoneNumber) async {
+      final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+      try {
+        if (await canLaunchUrl(phoneUri)) {
+          await launchUrl(phoneUri);
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Unable to make a call to $phoneNumber'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        }
+      } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Unable to make a call to $phoneNumber'),
+              content: Text('Error making call: $e'),
               backgroundColor: AppColors.error,
             ),
           );
         }
       }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error making call: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
     }
-  }
 
-  return Container(
-    margin: EdgeInsets.symmetric(horizontal: 16.w),
-    padding: EdgeInsets.all(16.w),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16.r),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 60.w,
-          height: 60.h,
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12.r),
+    return Container(
+      padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 22 : 20)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
           ),
-          child: Icon(
-            Icons.restaurant,
-            color: AppColors.primary,
-            size: 24.sp,
-          ),
-        ),
-        
-        SizedBox(width: 16.w),
-        
-        Expanded(
-          child: Column(
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                order.branchName ?? AppStrings.boshundhoraRA,
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark,
+              Container(
+                width: isDesktop ? 80 : 70,
+                height: isDesktop ? 80 : 70,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.15),
+                      AppColors.primaryDark.withOpacity(0.15),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.restaurant_rounded,
+                  color: AppColors.primary,
+                  size: isDesktop ? 36 : 32,
                 ),
               ),
-              SizedBox(height: 4.h),
-              Text(
-                '40 min', // Consider making this dynamic if available in Order
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: AppColors.textLight,
-                ),
-              ),
-              Text(
-                'Delivery: ${order.deliveryType.name}',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: AppColors.textLight,
-                ),
-              ),
-              // Display restaurant address
-              Text(
-                'Saborly, C/ de Pere IV, 208, Sant Martí, 08005 Barcelona, Spain',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: AppColors.textLight,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      order.branchName ?? AppStrings.boshundhoraRA,
+                      style: TextStyle(
+                        fontSize: isDesktop ? 18 : 17,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 4,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.schedule_rounded,
+                              size: 16,
+                              color: AppColors.textLight,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '40 min',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textLight,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.delivery_dining_rounded,
+                              size: 16,
+                              color: AppColors.textLight,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              order.deliveryType.name,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textLight,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Saborly, C/ de Pere IV, 208, Sant Martí, 08005 Barcelona, Spain',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textLight,
+                        height: 1.5,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-        
-        // Call Button
-        Container(
-          width: 40.w,
-          height: 40.h,
-          decoration: const BoxDecoration(
-            color: AppColors.primary,
-            shape: BoxShape.circle,
-          ),
-          child: IconButton(
-            onPressed: () => _makePhoneCall(phoneNumber),
-            icon: Icon(
-              Icons.phone,
-              color: Colors.white,
-              size: 18.sp,
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => makePhoneCall(phoneNumber),
+              icon: const Icon(Icons.phone_rounded, size: 20),
+              label: const Text(
+                'Call Restaurant',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
+
   Widget _buildPaymentInfo(Order order) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 22 : 20)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Payment Info',
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.payment_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Payment Info',
+                style: TextStyle(
+                  fontSize: isDesktop ? 18 : 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 12.h),
-          
+          const SizedBox(height: 20),
           _buildInfoRow('Method:', _getPaymentMethodText(order.paymentMethod)),
+          const SizedBox(height: 12),
           _buildInfoRow('Status:', _getPaymentStatusText(order.paymentStatus)),
         ],
       ),
@@ -492,57 +780,84 @@ Widget _buildRestaurantInfo(Order order) {
 
   Widget _buildOrderDetails(Order order) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 22 : 20)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            AppStrings.orderDetails,
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.receipt_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                AppStrings.orderDetails,
+                style: TextStyle(
+                  fontSize: isDesktop ? 18 : 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 12.h),
+          const SizedBox(height: 20),
           
-          // Display actual order items
           ...order.items.map((cartItem) => Padding(
-            padding: EdgeInsets.only(bottom: 8.h),
+            padding: const EdgeInsets.only(bottom: 16),
             child: Row(
               children: [
-                Icon(
-                  Icons.circle,
-                  color: cartItem.foodItem.isVeg ? Colors.green : Colors.red,
-                  size: 8.sp,
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: cartItem.foodItem.isVeg ? Colors.green : Colors.red,
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Icon(
+                    Icons.circle,
+                    color: cartItem.foodItem.isVeg ? Colors.green : Colors.red,
+                    size: 8,
+                  ),
                 ),
-                SizedBox(width: 8.w),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     '${cartItem.quantity}x ${cartItem.foodItem.name}',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15,
                       color: AppColors.textDark,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
                 Text(
                   '${AppStrings.currency}${cartItem.totalPrice.toStringAsFixed(2)}',
                   style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.textDark,
                   ),
                 ),
@@ -552,24 +867,24 @@ Widget _buildRestaurantInfo(Order order) {
           
           if (order.items.isEmpty)
             Container(
-              padding: EdgeInsets.all(12.w),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8.r),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 children: [
                   Icon(
-                    Icons.fastfood,
+                    Icons.fastfood_rounded,
                     color: AppColors.primary,
-                    size: 20.sp,
+                    size: 24,
                   ),
-                  SizedBox(width: 8.w),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Your delicious order items',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 14,
                         color: AppColors.textMedium,
                       ),
                     ),
@@ -578,18 +893,22 @@ Widget _buildRestaurantInfo(Order order) {
               ),
             ),
           
-          // Order totals
-          SizedBox(height: 12.h),
-          Divider(color: AppColors.divider),
-          SizedBox(height: 8.h),
+          const SizedBox(height: 20),
+          Divider(color: AppColors.divider, thickness: 1, height: 1),
+          const SizedBox(height: 16),
           _buildInfoRow('Subtotal:', '${AppStrings.currency}${order.subtotal.toStringAsFixed(2)}'),
           if (order.deliveryFee > 0)
             _buildInfoRow('Delivery Fee:', '${AppStrings.currency}${order.deliveryFee.toStringAsFixed(2)}'),
           if (order.tax > 0)
             _buildInfoRow('Tax:', '${AppStrings.currency}${order.tax.toStringAsFixed(2)}'),
-          SizedBox(height: 8.h),
-          Divider(color: AppColors.divider),
-          _buildInfoRow('Total:', '${AppStrings.currency}${order.total.toStringAsFixed(2)}', isBold: true),
+          const SizedBox(height: 16),
+          Divider(color: AppColors.divider, thickness: 2, height: 2),
+          const SizedBox(height: 16),
+          _buildInfoRow(
+            'Total:', 
+            '${AppStrings.currency}${order.total.toStringAsFixed(2)}', 
+            isBold: true,
+          ),
         ],
       ),
     );
@@ -597,22 +916,22 @@ Widget _buildRestaurantInfo(Order order) {
 
   Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 8.h),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15,
               color: AppColors.textLight,
-              fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
+              fontWeight: isBold ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
           Text(
             value,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15,
               fontWeight: isBold ? FontWeight.w700 : FontWeight.w600,
               color: isBold ? AppColors.primary : AppColors.textDark,
             ),
@@ -624,117 +943,31 @@ Widget _buildRestaurantInfo(Order order) {
 
   Widget _buildBottomBar() {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
       child: SafeArea(
-        child: Row(
-          children: [
-            // Expanded(
-            //   child: CustomButton(
-            //     text: AppStrings.cancelOrder,
-            //     isOutlined: true,
-            //     onPressed: () {
-            //       _showCancelOrderDialog(context);
-            //     },
-            //   ),
-            // ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: CustomButton(
-                text: AppStrings.home,
-                onPressed: () {
-    context.go(AppRoutes.home);
-                },
-              ),
-            ),
-          ],
+        child: CustomButton(
+          text: AppStrings.home,
+          onPressed: () => context.go(AppRoutes.home),
         ),
       ),
     );
   }
 
-void _showCancelOrderDialog(BuildContext context) { // Pass context explicitly
-  showDialog(
-    context: context,
-    builder: (dialogContext) { // Use a separate context for the dialog
-      return AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        title: Text(
-          'Cancel Order',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textDark,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to cancel this order?',
-          style: TextStyle(
-            fontSize: 14.sp,
-            color: AppColors.textMedium,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(
-              'No',
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: AppColors.textLight,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              // Show SnackBar after dialog dismissal
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Order cancellation requested'),
-                  backgroundColor: AppColors.warning,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  margin: EdgeInsets.all(20.w),
-                  duration: const Duration(seconds: 3), // Ensure timely dismissal
-                ),
-              );
-              // TODO: Implement order cancellation logic
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-            ),
-            child: Text(
-              'Yes, Cancel',
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      );
-    },
-  );
-}
   String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+    final period = date.hour >= 12 ? 'PM' : 'AM';
+    return '${months[date.month - 1]} ${date.day}, ${date.year} at $hour:${date.minute.toString().padLeft(2, '0')} $period';
   }
 
   String _getPaymentMethodText(PaymentMethod method) {

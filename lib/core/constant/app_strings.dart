@@ -130,7 +130,9 @@ class AppStrings {
   static const String orderPlaced = 'Pedido realizado';
   static const String orderConfirmed = 'Pedido confirmado';
   static const String preparing = 'Preparando';
-  static const String outForDelivery = 'En camino';
+  static const String outForDelivery = 'En camino'; 
+static const String ready = 'Listo para entregar';
+
   static const String delivered = 'Entregado';
   static const String getYourOrder = 'Recibe tu pedido ';
   static const String orderHistory = 'Historial de Pedidos';

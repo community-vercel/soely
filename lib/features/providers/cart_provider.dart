@@ -68,7 +68,7 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  void addItem({
+void addItem({
     required FoodItem foodItem,
     int quantity = 1,
     MealSize? selectedMealSize,
@@ -78,15 +78,26 @@ class CartProvider extends ChangeNotifier {
   }) {
     // Calculate total price
     double basePrice = foodItem.price;
-    if (selectedMealSize != null) {
+    
+    // Add meal size price only if it's not 0
+    if (selectedMealSize != null && selectedMealSize.additionalPrice <= 0) {
       basePrice += selectedMealSize.additionalPrice;
     }
+    else{
+            basePrice = selectedMealSize!.additionalPrice;
+
+    }
+    
+    // Add extras
     for (final extra in selectedExtras) {
       basePrice += extra.price;
     }
+    
+    // Add addons
     for (final addon in selectedAddons) {
       basePrice += addon.price;
     }
+    
     final totalPrice = basePrice * quantity;
 
     // Check if same item with same customizations already exists
@@ -125,7 +136,6 @@ class CartProvider extends ChangeNotifier {
     _saveCart(); // Save to storage
     notifyListeners();
   }
-
   void updateItemQuantity(String itemId, int newQuantity) {
     if (newQuantity <= 0) {
       removeItem(itemId);

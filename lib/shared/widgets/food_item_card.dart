@@ -8,44 +8,15 @@ import 'package:soely/core/constant/app_strings.dart';
 import 'package:soely/features/providers/cart_provider.dart';
 import '../models/food_item.dart';
 
-class FoodItemCard extends StatefulWidget {
+class FoodItemCard extends StatelessWidget {
   final FoodItem foodItem;
   final VoidCallback onTap;
-  final bool isHorizontal;
 
   const FoodItemCard({
     super.key,
     required this.foodItem,
     required this.onTap,
-    this.isHorizontal = false,
   });
-
-  @override
-  State<FoodItemCard> createState() => _FoodItemCardState();
-}
-
-class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  bool _isHovered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.03).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
 
   double _getResponsiveValue({
     required double mobile,
@@ -75,29 +46,9 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
         final screenWidth = MediaQuery.of(context).size.width;
         final isWeb = screenWidth >= 600;
         
-        // For web, always use vertical card regardless of isHorizontal
-        final shouldBeVertical = isWeb || !widget.isHorizontal;
-        
-        return MouseRegion(
-          onEnter: (_) => setState(() => _isHovered = true),
-          onExit: (_) => setState(() => _isHovered = false),
-          child: GestureDetector(
-            onTapDown: (_) => _animationController.forward(),
-            onTapUp: (_) => _animationController.reverse(),
-            onTapCancel: () => _animationController.reverse(),
-            onTap: widget.onTap,
-            child: AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _scaleAnimation.value,
-                  child: shouldBeVertical
-                      ? _buildVerticalCard(context, constraints, screenWidth, isWeb)
-                      : _buildHorizontalCard(context, constraints, screenWidth, isWeb),
-                );
-              },
-            ),
-          ),
+        return GestureDetector(
+          onTap: onTap,
+          child: _buildVerticalCard(context, constraints, screenWidth, isWeb),
         );
       },
     );
@@ -128,15 +79,14 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
         borderRadius: BorderRadius.circular(_getBorderRadius(cardSize, screenWidth)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(_isHovered && isWeb ? 0.12 : 0.08),
-            blurRadius: _isHovered && isWeb ? 16.r : 12.r,
-            offset: Offset(0, _isHovered && isWeb ? 6.h : 3.h),
-            spreadRadius: _isHovered && isWeb ? 2 : 0,
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8.r,
+            offset: Offset(0, 2.h),
           ),
         ],
         border: isWeb ? Border.all(
-          color: _isHovered ? AppColors.primary.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
-          width: _isHovered ? 1.5 : 1,
+          color: Colors.grey.withOpacity(0.1),
+          width: 1,
         ) : null,
       ),
       child: ClipRRect(
@@ -146,11 +96,11 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
           children: [
             Expanded(
               flex: isExtraSmall ? 3 : (isSmall ? 3 : 4),
-              child: _buildImageSection(cardSize, screenWidth, isWeb),
+              child: _buildImageSection(cardSize, screenWidth),
             ),
             Expanded(
               flex: isExtraSmall ? 4 : (isSmall ? 3 : 3),
-              child: _buildDetailsSection(cardSize, screenWidth, constraints, isWeb),
+              child: _buildDetailsSection(cardSize, screenWidth, isWeb, context),
             ),
           ],
         ),
@@ -158,67 +108,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildHorizontalCard(BuildContext context, BoxConstraints constraints, double screenWidth, bool isWeb) {
-    final cardSize = _getCardSize(constraints);
-    final cardHeight = _getResponsiveValue(
-      mobile: 100,
-      tablet: 120,
-      desktop: 140,
-      screenWidth: screenWidth,
-    ).h.clamp(90.0, 160.0);
-
-    return Container(
-      height: cardHeight,
-      margin: EdgeInsets.symmetric(
-        horizontal: _getResponsiveValue(
-          mobile: 6,
-          tablet: 8,
-          desktop: 10,
-          screenWidth: screenWidth,
-        ).w,
-        vertical: _getResponsiveValue(
-          mobile: 4,
-          tablet: 6,
-          desktop: 8,
-          screenWidth: screenWidth,
-        ).h,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(_getBorderRadius(cardSize, screenWidth)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(_animationController.isAnimating ? 0.15 : 0.08),
-            blurRadius: _getResponsiveValue(
-              mobile: 8,
-              tablet: 10,
-              desktop: 12,
-              screenWidth: screenWidth,
-            ).r,
-            offset: Offset(0, _animationController.isAnimating ? 4.h : 2.h),
-            spreadRadius: _animationController.isAnimating ? 1 : 0,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(_getBorderRadius(cardSize, screenWidth)),
-        child: Row(
-          children: [
-            SizedBox(
-              width: cardHeight,
-              height: cardHeight,
-              child: _buildHorizontalImage(cardSize, screenWidth),
-            ),
-            Expanded(
-              child: _buildHorizontalDetails(cardSize, screenWidth),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailsSection(CardSize cardSize, double screenWidth, BoxConstraints constraints, bool isWeb) {
+  Widget _buildDetailsSection(CardSize cardSize, double screenWidth, bool isWeb, BuildContext context) {
     final isExtraSmall = cardSize == CardSize.extraSmall;
     final padding = _getPadding(cardSize, screenWidth);
 
@@ -229,7 +119,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
         children: [
           Flexible(
             child: Text(
-              widget.foodItem.name,
+              foodItem.name,
               maxLines: isExtraSmall ? 1 : 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -237,7 +127,6 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                 fontWeight: FontWeight.w700,
                 color: AppColors.textDark,
                 height: 1.2,
-                letterSpacing: -0.2,
               ),
             ),
           ),
@@ -245,8 +134,8 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
             SizedBox(height: _getSpacing(cardSize, screenWidth)),
             Flexible(
               child: Text(
-                widget.foodItem.description,
-                maxLines: cardSize == CardSize.small ? 1 : 1,
+                foodItem.description,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: _getDescriptionFontSize(cardSize, screenWidth),
@@ -266,9 +155,9 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (widget.foodItem.hasActiveOffer) ...[
+                    if (foodItem.hasActiveOffer) ...[
                       Text(
-                        '${AppStrings.currency}${widget.foodItem.price.toStringAsFixed(2)}',
+                        '${AppStrings.currency}${foodItem.price.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontSize: _getSmallFontSize(cardSize, screenWidth),
                           color: AppColors.textLight,
@@ -281,12 +170,11 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                       SizedBox(height: 2.h),
                     ],
                     Text(
-                      '${AppStrings.currency}${widget.foodItem.effectivePrice.toStringAsFixed(2)}',
+                      '${AppStrings.currency}${foodItem.effectivePrice.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: _getPriceFontSize(cardSize, screenWidth),
                         fontWeight: FontWeight.w800,
                         color: AppColors.primary,
-                        letterSpacing: -0.5,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -295,7 +183,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                 ),
               ),
               SizedBox(width: 8.w),
-              _buildAddButton(cardSize, screenWidth, isWeb),
+              _buildAddButton(cardSize, screenWidth, context),
             ],
           ),
         ],
@@ -303,139 +191,19 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildHorizontalDetails(CardSize cardSize, double screenWidth) {
-    final padding = _getPadding(cardSize, screenWidth);
-
-    return Padding(
-      padding: EdgeInsets.all(padding),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.circle,
-                color: widget.foodItem.isVeg ? Colors.green : Colors.red,
-                size: _getSmallIconSize(cardSize, screenWidth),
-              ),
-              SizedBox(width: 6.w),
-              Expanded(
-                child: Text(
-                  widget.foodItem.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: _getTitleFontSize(cardSize, screenWidth),
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ),
-              if (widget.foodItem.rating > 0) ...[
-                SizedBox(width: 6.w),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6.r),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.star,
-                        color: Colors.amber,
-                        size: _getSmallIconSize(cardSize, screenWidth),
-                      ),
-                      SizedBox(width: 2.w),
-                      Text(
-                        widget.foodItem.rating.toStringAsFixed(1),
-                        style: TextStyle(
-                          fontSize: _getSmallFontSize(cardSize, screenWidth),
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-          if (cardSize != CardSize.extraSmall && cardSize != CardSize.small)
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 6.h),
-                child: Text(
-                  widget.foodItem.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: _getDescriptionFontSize(cardSize, screenWidth),
-                    color: AppColors.textLight,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Flexible(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (widget.foodItem.hasActiveOffer) ...[
-                      Text(
-                        '${AppStrings.currency}${widget.foodItem.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: _getSmallFontSize(cardSize, screenWidth),
-                          color: AppColors.textLight,
-                          decoration: TextDecoration.lineThrough,
-                          decorationThickness: 2,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 2.h),
-                    ],
-                    Text(
-                      '${AppStrings.currency}${widget.foodItem.effectivePrice.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: _getPriceFontSize(cardSize, screenWidth),
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                        letterSpacing: -0.5,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 8.w),
-              _buildAddButton(cardSize, screenWidth, false),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImageSection(CardSize cardSize, double screenWidth, bool isWeb) {
+  Widget _buildImageSection(CardSize cardSize, double screenWidth) {
     return Stack(
       children: [
         SizedBox.expand(
           child: kIsWeb
               ? Image.network(
-                  widget.foodItem.imageUrl.isNotEmpty
-                      ? widget.foodItem.imageUrl
-                      : 'https://picsum.photos/200/200?random=${widget.foodItem.id}',
+                  foodItem.imageUrl.isNotEmpty
+                      ? foodItem.imageUrl
+                      : 'https://picsum.photos/200/200?random=${foodItem.id}',
                   fit: BoxFit.cover,
+                  cacheWidth: 400,
+                  cacheHeight: 400,
+                  filterQuality: FilterQuality.medium,
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
                     return Container(
@@ -444,10 +212,6 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
                           color: AppColors.primary,
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
                         ),
                       ),
                     );
@@ -455,11 +219,11 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                   errorBuilder: (context, error, stackTrace) => _buildImageError(cardSize, screenWidth),
                 )
               : CachedNetworkImage(
-                  imageUrl: widget.foodItem.imageUrl.isNotEmpty
-                      ? widget.foodItem.imageUrl
-                      : 'https://picsum.photos/200/200?random=${widget.foodItem.id}',
+                  imageUrl: foodItem.imageUrl.isNotEmpty
+                      ? foodItem.imageUrl
+                      : 'https://picsum.photos/200/200?random=${foodItem.id}',
                   fit: BoxFit.cover,
-                  fadeInDuration: const Duration(milliseconds: 300),
+                  fadeInDuration: const Duration(milliseconds: 200),
                   placeholder: (context, url) => Container(
                     color: AppColors.shimmer,
                     child: Center(
@@ -482,7 +246,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
               borderRadius: BorderRadius.circular(6.r),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withOpacity(0.08),
                   blurRadius: 4.r,
                   offset: Offset(0, 2.h),
                 ),
@@ -490,12 +254,12 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
             ),
             child: Icon(
               Icons.circle,
-              color: widget.foodItem.isVeg ? Colors.green : Colors.red,
+              color: foodItem.isVeg ? Colors.green : Colors.red,
               size: _getSmallIconSize(cardSize, screenWidth),
             ),
           ),
         ),
-        if (widget.foodItem.hasActiveOffer)
+        if (foodItem.hasActiveOffer)
           Positioned(
             top: _getPadding(cardSize, screenWidth),
             right: _getPadding(cardSize, screenWidth),
@@ -505,17 +269,12 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                 vertical: _getSmallPadding(cardSize, screenWidth) * 1.5,
               ),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primary.withOpacity(0.8),
-                  ],
-                ),
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(12.r),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.4),
-                    blurRadius: 8.r,
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 4.r,
                     offset: Offset(0, 2.h),
                   ),
                 ],
@@ -530,7 +289,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                   ),
                   SizedBox(width: 4.w),
                   Text(
-                    widget.foodItem.offer?.badge ?? '${widget.foodItem.discountPercentage}% OFF',
+                    foodItem.offer?.badge ?? '${foodItem.discountPercentage}% OFF',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: _getSmallFontSize(cardSize, screenWidth),
@@ -541,7 +300,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
               ),
             ),
           ),
-        if (widget.foodItem.rating > 0)
+        if (foodItem.rating > 0)
           Positioned(
             bottom: _getPadding(cardSize, screenWidth),
             left: _getPadding(cardSize, screenWidth),
@@ -553,13 +312,6 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.75),
                 borderRadius: BorderRadius.circular(8.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 4.r,
-                    offset: Offset(0, 2.h),
-                  ),
-                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -571,7 +323,7 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                   ),
                   SizedBox(width: 4.w),
                   Text(
-                    widget.foodItem.rating.toStringAsFixed(1),
+                    foodItem.rating.toStringAsFixed(1),
                     style: TextStyle(
                       fontSize: _getSmallFontSize(cardSize, screenWidth),
                       fontWeight: FontWeight.w700,
@@ -579,89 +331,6 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                     ),
                   ),
                 ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildHorizontalImage(CardSize cardSize, double screenWidth) {
-    return Stack(
-      children: [
-        kIsWeb
-            ? Image.network(
-                widget.foodItem.imageUrl.isNotEmpty
-                    ? widget.foodItem.imageUrl
-                    : 'https://picsum.photos/200/200?random=${widget.foodItem.id}',
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: AppColors.shimmer,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: AppColors.primary,
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
-                            : null,
-                      ),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) => _buildImageError(cardSize, screenWidth),
-              )
-            : CachedNetworkImage(
-                imageUrl: widget.foodItem.imageUrl.isNotEmpty
-                    ? widget.foodItem.imageUrl
-                    : 'https://picsum.photos/200/200?random=${widget.foodItem.id}',
-                fit: BoxFit.cover,
-                fadeInDuration: const Duration(milliseconds: 300),
-                placeholder: (context, url) => Container(
-                  color: AppColors.shimmer,
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-                errorWidget: (context, url, error) => _buildImageError(cardSize, screenWidth),
-              ),
-        if (widget.foodItem.hasActiveOffer)
-          Positioned(
-            top: _getPadding(cardSize, screenWidth),
-            left: _getPadding(cardSize, screenWidth),
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: _getPadding(cardSize, screenWidth) * 0.8,
-                vertical: _getSmallPadding(cardSize, screenWidth) * 1.5,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primary.withOpacity(0.8),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.4),
-                    blurRadius: 8.r,
-                    offset: Offset(0, 2.h),
-                  ),
-                ],
-              ),
-              child: Text(
-                widget.foodItem.offer?.badge ?? '${widget.foodItem.discountPercentage}% OFF',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: _getSmallFontSize(cardSize, screenWidth) * 0.9,
-                  fontWeight: FontWeight.bold,
-                ),
               ),
             ),
           ),
@@ -697,18 +366,18 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
   }
 
   void _addToCart(BuildContext context, CartProvider cartProvider) {
-    if (widget.foodItem.mealSizes.isNotEmpty ||
-        widget.foodItem.extras.isNotEmpty ||
-        widget.foodItem.addons.isNotEmpty) {
-      widget.onTap();
+    if (foodItem.mealSizes.isNotEmpty ||
+        foodItem.extras.isNotEmpty ||
+        foodItem.addons.isNotEmpty) {
+      onTap();
     } else {
-      final foodItemWithDiscount = widget.foodItem.copyWith(
-        price: widget.foodItem.effectivePrice,
+      final foodItemWithDiscount = foodItem.copyWith(
+        price: foodItem.effectivePrice,
       );
       cartProvider.addItem(foodItem: foodItemWithDiscount);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${widget.foodItem.name} added to cart'),
+          content: Text('${foodItem.name} added to cart'),
           duration: const Duration(seconds: 2),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
@@ -719,14 +388,14 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
           action: SnackBarAction(
             label: 'Undo',
             textColor: Colors.white,
-            onPressed: () => cartProvider.removeItem(widget.foodItem.id),
+            onPressed: () => cartProvider.removeItem(foodItem.id),
           ),
         ),
       );
     }
   }
- 
-  Widget _buildAddButton(CardSize cardSize, double screenWidth, bool isWeb) {
+
+  Widget _buildAddButton(CardSize cardSize, double screenWidth, BuildContext context) {
     return Consumer<CartProvider>(
       builder: (context, cartProvider, child) {
         return Material(
@@ -734,25 +403,19 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
           child: InkWell(
             borderRadius: BorderRadius.circular(10.r),
             onTap: () => _addToCart(context, cartProvider),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
+            child: Container(
               padding: EdgeInsets.symmetric(
                 horizontal: _getPadding(cardSize, screenWidth) * 1.2,
                 vertical: _getSmallPadding(cardSize, screenWidth) * 2.2,
               ),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primary.withOpacity(0.8),
-                  ],
-                ),
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(10.r),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(_isHovered && isWeb ? 0.4 : 0.25),
-                    blurRadius: _isHovered && isWeb ? 10.r : 6.r,
-                    offset: Offset(0, _isHovered && isWeb ? 4.h : 2.h),
+                    color: AppColors.primary.withOpacity(0.25),
+                    blurRadius: 6.r,
+                    offset: Offset(0, 2.h),
                   ),
                 ],
               ),
@@ -771,7 +434,6 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
                       fontSize: _getButtonFontSize(cardSize, screenWidth),
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
-                      letterSpacing: 0.3,
                     ),
                   ),
                 ],
@@ -842,11 +504,11 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
         return (base * 0.85).clamp(4.0, 6.0);
       case CardSize.medium:
         return base.clamp(6.0, 8.0);
-    
-        case CardSize.large:
-          return (base * 1.15).clamp(5.0, 7.0);
-      }
+      case CardSize.large:
+        return (base * 1.15).clamp(5.0, 7.0);
     }
+  }
+
   double _getTitleFontSize(CardSize cardSize, double screenWidth) {
     final base = _getResponsiveValue(
       mobile: 14,
@@ -874,7 +536,6 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
       desktop: 15,
       screenWidth: screenWidth,
     ).sp;
-
     return base.clamp(12.0, 15.0);
   }
 
@@ -885,7 +546,6 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
       desktop: 17,
       screenWidth: screenWidth,
     ).sp;
-
     return base.clamp(14.0, 17.0);
   }
 
@@ -896,7 +556,6 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
       desktop: 16,
       screenWidth: screenWidth,
     ).sp;
-
     return base.clamp(13.0, 15.0);
   }
 
@@ -909,52 +568,49 @@ class _FoodItemCardState extends State<FoodItemCard> with SingleTickerProviderSt
     ).sp;
   }
 
-
-    double _getIconSize(CardSize cardSize, double screenWidth) {
-      final base = _getResponsiveValue(
-        mobile: 20,
-        tablet: 22,
-        desktop: 24,
-        screenWidth: screenWidth,
-      ).sp;
-      
-      switch (cardSize) {
-        case CardSize.extraSmall:
-          return (base * 0.8).clamp(16.0, 20.0);
-        case CardSize.small:
-          return (base * 0.9).clamp(18.0, 22.0);
-        case CardSize.medium:
-          return base.clamp(20.0, 24.0);
-        case CardSize.large:
-          return (base * 1.1).clamp(22.0, 26.0);
-      }
+  double _getIconSize(CardSize cardSize, double screenWidth) {
+    final base = _getResponsiveValue(
+      mobile: 20,
+      tablet: 22,
+      desktop: 24,
+      screenWidth: screenWidth,
+    ).sp;
+    
+    switch (cardSize) {
+      case CardSize.extraSmall:
+        return (base * 0.8).clamp(16.0, 20.0);
+      case CardSize.small:
+        return (base * 0.9).clamp(18.0, 22.0);
+      case CardSize.medium:
+        return base.clamp(20.0, 24.0);
+      case CardSize.large:
+        return (base * 1.1).clamp(22.0, 26.0);
     }
-
-    double _getSmallIconSize(CardSize cardSize, double screenWidth) {
-      final base = _getResponsiveValue(
-        mobile: 10,
-        tablet: 11,
-        desktop: 12,
-        screenWidth: screenWidth,
-      ).sp;
-      
-      switch (cardSize) {
-        case CardSize.extraSmall:
-          return (base * 0.8).clamp(8.0, 10.0);
-        case CardSize.small:
-          return (base * 0.9).clamp(9.0, 11.0);
-        case CardSize.medium:
-          return base.clamp(10.0, 12.0);
-        case CardSize.large:
-          return (base * 1.1).clamp(11.0, 13.0);
-      }
-    }
-
   }
 
-  enum CardSize {
-    extraSmall,
-    small,
-    medium,
-    large,
+  double _getSmallIconSize(CardSize cardSize, double screenWidth) {
+    final base = _getResponsiveValue(
+      mobile: 10,
+      tablet: 11,
+      desktop: 12,
+      screenWidth: screenWidth,
+    ).sp;
+    
+    switch (cardSize) {
+      case CardSize.extraSmall:
+        return (base * 0.8).clamp(8.0, 10.0);
+      case CardSize.small:
+        return (base * 0.9).clamp(9.0, 11.0);
+      case CardSize.medium:
+        return base.clamp(10.0, 12.0);
+      case CardSize.large:
+        return (base * 1.1).clamp(11.0, 13.0);
+    }
   }
+}
+
+enum CardSize {
+  extraSmall,
+  small,
+  medium,
+  large,}

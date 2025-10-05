@@ -91,6 +91,7 @@ class FoodKingApp extends StatelessWidget {
           child: Consumer<AuthProvider>(
             builder: (context, authProvider, _) {
               return MaterialApp.router(
+                
                 title: AppStrings.appName,
                 debugShowCheckedModeBanner: false,
                 theme: _buildThemeData(),

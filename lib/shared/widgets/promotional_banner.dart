@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:soely/core/services/banner_service.dart';
 
-
 class DynamicPromotionalBanner extends StatefulWidget {
   final String? category;
   final double? height;
@@ -27,7 +26,7 @@ class DynamicPromotionalBanner extends StatefulWidget {
 }
 
 class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
- late PageController _pageController;
+  late PageController _pageController;
   int _currentIndex = 0;
   List<BannerModel> _banners = [];
   bool _isLoading = true;
@@ -41,6 +40,8 @@ class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
   }
 
   Future<void> _loadBanners() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -48,6 +49,8 @@ class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
 
     try {
       final banners = await BannerService.getActiveBanners(category: widget.category);
+      
+      if (!mounted) return;
       
       if (banners.isEmpty) {
         setState(() {
@@ -62,10 +65,11 @@ class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
         _isLoading = false;
       });
 
-      if (widget.autoPlay) {
+      if (widget.autoPlay && mounted) {
         _startAutoPlay();
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Failed to load banners';
         _isLoading = false;
@@ -83,31 +87,35 @@ class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
   }
 
   void _nextSlide() {
+    if (!mounted) return;
+    
     if (_currentIndex < _banners.length - 1) {
       _currentIndex++;
     } else {
       _currentIndex = 0;
     }
     
-    _pageController.animateToPage(
-      _currentIndex,
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeInOutCubic,
-    );
+    _pageController.jumpToPage(_currentIndex);
+    
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _previousSlide() {
+    if (!mounted) return;
+    
     if (_currentIndex > 0) {
       _currentIndex--;
     } else {
       _currentIndex = _banners.length - 1;
     }
     
-    _pageController.animateToPage(
-      _currentIndex,
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeInOutCubic,
-    );
+    _pageController.jumpToPage(_currentIndex);
+    
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -123,7 +131,6 @@ class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
     if (_banners.isEmpty) {
       return _buildEmptyWidget();
     }
-
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -159,13 +166,15 @@ class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
                 child: ClipRRect(
                   borderRadius: widget.borderRadius ?? 
                     BorderRadius.circular(isLargeDesktop ? 32 : (isDesktop ? 28 : 24)),
-                  child:PageView.builder(
+                  child: PageView.builder(
                     controller: _pageController,
                     onPageChanged: (index) {
-                      setState(() {
-                        _currentIndex = index;
-                      });
-                      widget.onSlideChanged?.call();
+                      if (mounted) {
+                        setState(() {
+                          _currentIndex = index;
+                        });
+                        widget.onSlideChanged?.call();
+                      }
                     },
                     itemCount: _banners.length,
                     itemBuilder: (context, index) {
@@ -202,7 +211,8 @@ class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
       },
     );
   }
-    Widget _buildLoadingWidget() {
+
+  Widget _buildLoadingWidget() {
     return Container(
       height: 200,
       margin: const EdgeInsets.all(16),
@@ -215,7 +225,8 @@ class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
       ),
     );
   }
-Widget _buildErrorWidget() {
+
+  Widget _buildErrorWidget() {
     return Container(
       height: 200,
       margin: const EdgeInsets.all(16),
@@ -260,7 +271,6 @@ Widget _buildErrorWidget() {
 
     return GestureDetector(
       onTap: banner.link != null ? () {
-        // Handle banner link navigation
         debugPrint('Navigate to: ${banner.link}');
       } : null,
       child: Container(
@@ -346,8 +356,7 @@ Widget _buildErrorWidget() {
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(
           _banners.length,
-          (index) => AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
+          (index) => Container(
             margin: EdgeInsets.symmetric(horizontal: isLargeDesktop ? 6 : 4),
             width: _currentIndex == index ? (isLargeDesktop ? 32 : 24) : (isLargeDesktop ? 12 : 8),
             height: isLargeDesktop ? 12 : 8,
@@ -373,19 +382,16 @@ Widget _buildErrorWidget() {
   }
 
   double _calculateHeight(double screenWidth) {
-    if (screenWidth >= 1440) return 433; // Large desktop
-    if (screenWidth >= 1024) return 400; // Desktop
-    if (screenWidth >= 768) return 350;  // Large tablet
-    if (screenWidth >= 600) return 200;  // Tablet
-    if (screenWidth >= 480) return 180;  // Large mobile
-    if (screenWidth >= 400) return 160;  // Medium mobile
-    return 140; // Small mobile
+    if (screenWidth >= 1440) return 433;
+    if (screenWidth >= 1024) return 400;
+    if (screenWidth >= 768) return 350;
+    if (screenWidth >= 600) return 200;
+    if (screenWidth >= 480) return 180;
+    if (screenWidth >= 400) return 160;
+    return 140;
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    super.dispose();
-  }
-}
-
+    super.dispose();}}
