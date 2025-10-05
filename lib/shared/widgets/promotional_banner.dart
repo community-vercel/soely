@@ -212,6 +212,7 @@ class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
     );
   }
 
+
   Widget _buildLoadingWidget() {
     return Container(
       height: 200,
@@ -378,8 +379,7 @@ class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
           ),
         ),
       ),
-    );
-  }
+    );}
 
   double _calculateHeight(double screenWidth) {
     if (screenWidth >= 1440) return 433;
