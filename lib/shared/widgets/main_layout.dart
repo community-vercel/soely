@@ -39,11 +39,18 @@ class _MainLayoutState extends State<MainLayout> {
       route: AppRoutes.offer,
     ),
     BottomNavItem(
-      icon: Icons.person_outline,
-      activeIcon: Icons.person,
-      label: 'Perfil',
-      route: AppRoutes.profile,
-    ),
+  icon: Icons.person_outline,
+  activeIcon: Icons.person,
+  label: 'Sobre Nosotros', // About Us
+  route: AppRoutes.about,
+),
+BottomNavItem(
+  icon: Icons.contact_page_outlined,
+  activeIcon: Icons.contact_page,
+  label: 'Contáctanos', // Contact Us
+  route: AppRoutes.contact,
+),
+
   ];
 
 @override
@@ -94,11 +101,19 @@ void _updateSelectedIndex() {
       route: AppRoutes.offer,
     ),
     BottomNavItem(
-      icon: Icons.person_outline,
-      activeIcon: Icons.person,
-      label: 'Perfil',
-      route: AppRoutes.profile,
-    ),
+  icon: Icons.person_outline,
+  activeIcon: Icons.person,
+  label: 'Sobre Nosotros', // About Us
+  route: AppRoutes.about,
+),
+BottomNavItem(
+  icon: Icons.contact_page_outlined,
+  activeIcon: Icons.contact_page,
+  label: 'Contáctanos', // Contact Us
+  route: AppRoutes.contact,
+),
+
+
   ];
 
   void _onItemTapped(int index, bool isSmallScreen) {
@@ -161,7 +176,7 @@ PreferredSizeWidget _buildAppBar(bool isDesktop) {
     ),
     title: Center(
       child: Container(
-        constraints: BoxConstraints(maxWidth: 1500.w),
+        constraints: BoxConstraints(maxWidth: 1700.w),
         padding: EdgeInsets.symmetric(horizontal: 4.w),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -178,7 +193,7 @@ PreferredSizeWidget _buildAppBar(bool isDesktop) {
 
 Widget _buildLogo() {
   return Container(
-    padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 10.w),
+    padding: EdgeInsets.symmetric( horizontal: 10.w),
     child: GestureDetector(
       onTap: () => context.go(AppRoutes.home),
       child: AnimatedContainer(
@@ -225,12 +240,12 @@ Widget _buildNavItemsForDesktop() {
       final isSelected = index == _selectedIndex;
 
       return Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w),
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: InkWell(
           onTap: () => _onItemTapped(index, false),
           borderRadius: BorderRadius.circular(8.r),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
             decoration: BoxDecoration(
               color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.transparent,
               borderRadius: BorderRadius.circular(8.r),
@@ -267,48 +282,19 @@ Widget _buildNavItemsForDesktop() {
       children: [
         if (isDesktop) ...[
           SizedBox(
-            width: 320.w,
+            width: 300.w,
             child:  SearchBarWidget(),
           ),
-          SizedBox(width: 16.w),
+          SizedBox(width: 8.w),
         ],
         _buildLanguageSelector(),
-        SizedBox(width: 12.w),
+        SizedBox(width:8.w),
         _buildCartButton(),
-        SizedBox(width: 12.w),
+        SizedBox(width: 8.w),
         _buildAccountButton(),
       ],
     );
   }
-
-Widget _buildSearchField() {
-  return Container(
-    height: 44.h,
-    decoration: BoxDecoration(
-      color: Colors.grey[50],
-      borderRadius: BorderRadius.circular(22.r),
-      border: Border.all(color: Colors.grey[200]!, width: 1),
-    ),
-    child: TextField(
-      textAlignVertical: TextAlignVertical.center, // 🔹 keeps text vertically centered
-      decoration: InputDecoration(
-        hintText: 'Buscar comida deliciosa....',
-        hintStyle: TextStyle(
-          color: AppColors.textLight,
-          fontSize: 15.sp,
-          fontWeight: FontWeight.w400,
-        ),
-        prefixIcon: Icon(
-          Icons.search,
-          color: AppColors.textLight,
-          size: 20.sp,
-        ),
-        filled: false,
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w), // 🔹 remove vertical padding
-      ),
-    ),
-  );}
 
   Widget _buildLanguageSelector() {
     return Container(

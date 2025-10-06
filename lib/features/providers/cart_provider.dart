@@ -83,9 +83,12 @@ void addItem({
     if (selectedMealSize != null && selectedMealSize.additionalPrice <= 0) {
       basePrice += selectedMealSize.additionalPrice;
     }
-    else{
+    else if(selectedMealSize != null){
             basePrice = selectedMealSize!.additionalPrice;
 
+    }
+    else{
+       basePrice = foodItem.price;
     }
     
     // Add extras

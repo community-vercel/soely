@@ -6,6 +6,7 @@ import 'package:soely/features/auth/screens/authforgot.dart';
 import 'package:soely/features/auth/screens/authreset.dart';
 import 'package:soely/features/auth/screens/changeword.dart';
 import 'package:soely/features/home/screens/SplashScreen.dart';
+import 'package:soely/features/menu/screens/AboutUsScreen.dart';
 import 'package:soely/features/menu/screens/cart_screen.dart';
 import 'package:soely/features/auth/screens/eemailVerificationScreen.dart';
 import 'package:soely/features/menu/screens/offersScreen.dart';
@@ -13,6 +14,7 @@ import 'package:soely/features/menu/screens/order_history.dart';
 import 'package:soely/features/menu/screens/order_status.dart';
 import 'package:soely/features/menu/screens/payment_scree.dart';
 import 'package:soely/features/menu/screens/profile_screen.dart';
+import 'package:soely/features/menu/screens/theContactScreen.dart';
 import 'package:soely/features/providers/auth_proveder.dart';
 
 import '../../features/auth/screens/login_screen.dart';
@@ -37,6 +39,8 @@ class AppRoutes {
   static const String offer = '/offer';
   static const String orderStatus = '/order-status/:orderId';
   static const String emailVerification = '/email-verification';
+ static const String about = '/about';
+  static const String contact = '/contact';
 
   static const String foodDetail = '/food-detail';
   static const String cart = '/cart';
@@ -84,6 +88,16 @@ class AppRoutes {
               final categoryId = extra?['category'] as String?;
               return MenuScreen(categoryId: categoryId);
             },
+          ),
+          GoRoute(
+            path: about,
+            name: 'about',
+            builder: (context, state) => const AboutUsScreen(),
+          ),
+          GoRoute(
+            path: contact,
+            name: 'contact',
+            builder: (context, state) => const ContactScreen(),
           ),
           GoRoute(
             path: offer,
