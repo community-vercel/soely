@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:soely/core/services/api_service.dart';
 import 'package:soely/shared/models/offer.dart';
 
 class OffersProvider extends ChangeNotifier {
@@ -9,6 +10,7 @@ class OffersProvider extends ChangeNotifier {
   List<FoodItemWithOffer> _itemsWithOffers = [];
   bool _isLoading = false;
   String? _error;
+  String _currentLanguage = 'es';
 
   static const String baseUrl = 'https://soleybackend.vercel.app/api/v1';
 
@@ -27,42 +29,123 @@ class OffersProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Load all offers
+  /// ✅ Set language
+  Future<void> setLanguage(String languageCode) async {
+    if (_currentLanguage != languageCode) {
+      _currentLanguage = languageCode;
+      notifyListeners();
+    }
+  }
+
+  /// ✅ Main method: Load all offers with language support
   Future<void> loadOffers() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/offer'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 10));
+      // Set API language
+      ApiService().setLanguage(_currentLanguage);
+      
+      
+      // Run both requests in parallel
+      await Future.wait([
+        _loadMainOffers(),
+        _loadItemsWithOffers(),
+      ]);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        if (data['success'] == true) {
-          final List<dynamic> offersJson = data['offers'];
-          _allOffers = offersJson.map((json) => _parseOfferFromApi(json)).toList();
-        } else {
-          _error = data['message'] ?? 'Failed to load offers';
-        }
-      } else {
-        _error = 'Server error: ${response.statusCode}';
-      }
+  
     } catch (e) {
       _error = 'Failed to load offers: ${e.toString()}';
-      debugPrint('Error loading offers: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Load featured offers
+  /// ✅ ADDED: Load main offers
+  Future<void> _loadMainOffers() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/offer'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Language': _currentLanguage,
+        },
+      ).timeout(const Duration(seconds: 10));
+
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        if (data['success'] == true) {
+          final List<dynamic> offersJson = data['offers'] ?? [];
+          _allOffers = offersJson
+              .map((json) => _parseOfferFromApi(json))
+              .toList();
+          
+        } else {
+          _error = data['message'] ?? 'Failed to load main offers';
+        }
+      } else {
+        _error = 'Server error: ${response.statusCode}';
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// ✅ ADDED: Load items with active offers
+ /// ✅ ADDED: Load items with active offers
+Future<void> _loadItemsWithOffers() async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/offer/items-with-offers'),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Language': _currentLanguage,
+      },
+    ).timeout(const Duration(seconds: 10));
+
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      
+      if (data['success'] == true) {
+        final List<dynamic> itemsJson = data['items'] ?? [];
+        
+        if (itemsJson.isEmpty) {
+          _itemsWithOffers = [];
+        } else {
+          // ✅ CRITICAL: Pass current language to parser
+          _itemsWithOffers = itemsJson
+              .map((json) {
+                try {
+                  return FoodItemWithOffer.fromJson(
+                    json,
+                    currentLanguage: _currentLanguage, // ← PASS LANGUAGE HERE
+                  );
+                } catch (e) {
+                  return null;
+                }
+              })
+              .whereType<FoodItemWithOffer>()
+              .toList();
+          
+        }
+      } else {
+        _error = data['message'] ?? 'Failed to load items with offers';
+        _itemsWithOffers = [];
+      }
+    } else {
+      _error = 'Server error: ${response.statusCode}';
+      _itemsWithOffers = [];
+    }
+  } catch (e) {
+    rethrow;
+  }
+}
+  /// Load featured offers
   Future<void> loadFeaturedOffers() async {
     _isLoading = true;
     _error = null;
@@ -73,8 +156,10 @@ class OffersProvider extends ChangeNotifier {
         Uri.parse('$baseUrl/offer?featured=true'),
         headers: {
           'Content-Type': 'application/json',
+          'X-Language': _currentLanguage,
         },
       ).timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
@@ -89,50 +174,13 @@ class OffersProvider extends ChangeNotifier {
       }
     } catch (e) {
       _error = 'Failed to load featured offers: ${e.toString()}';
-      debugPrint('Error loading featured offers: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Load items with active offers
-Future<void> loadItemsWithOffers() async {
-  _isLoading = true;
-  _error = null;
-  notifyListeners();
-
-  try {
-    final response = await http.get(
-      Uri.parse('$baseUrl/offer/items-with-offers'), // Corrected endpoint
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    ).timeout(const Duration(seconds: 10));
-
-    debugPrint("Response: ${response.body}");
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['success'] == true) {
-        final List<dynamic> itemsJson = data['items'];
-        _itemsWithOffers = itemsJson
-            .map((json) => FoodItemWithOffer.fromJson(json))
-            .toList();
-      } else {
-        _error = data['message'] ?? 'Failed to load items with offers';
-      }
-    } else {
-      _error = 'Server error: ${response.statusCode}';
-    }
-  } catch (e) {
-    _error = 'Failed to load items with offers: ${e.toString()}';
-    debugPrint('Error loading items with offers: $e');
-  } finally {
-    _isLoading = false;
-    notifyListeners();
-  }
-} // Validate coupon code
+  /// Validate coupon code
   Future<Map<String, dynamic>?> validateCouponCode(
     String couponCode, {
     required double subtotal,
@@ -161,39 +209,38 @@ Future<void> loadItemsWithOffers() async {
       }
       return null;
     } catch (e) {
-      debugPrint('Error validating coupon: $e');
       return null;
     }
   }
 
-  // Get items by category with offers
+  /// Get items by category with offers
   List<FoodItemWithOffer> getItemsByCategory(String categoryId) {
     return _itemsWithOffers
       .where((item) => item.category.id == categoryId)
       .toList();
   }
 
-  // Get best discount items (sorted by discount percentage)
+  /// Get best discount items (sorted by discount percentage)
   List<FoodItemWithOffer> getBestDiscounts({int limit = 10}) {
     final sortedItems = List<FoodItemWithOffer>.from(_itemsWithOffers);
     sortedItems.sort((a, b) => b.discountPercentage.compareTo(a.discountPercentage));
     return sortedItems.take(limit).toList();
   }
 
-  // Filter items by minimum discount percentage
+  /// Filter items by minimum discount percentage
   List<FoodItemWithOffer> filterByMinDiscount(int minPercentage) {
     return _itemsWithOffers
       .where((item) => item.discountPercentage >= minPercentage)
       .toList();
   }
 
-  // Clear error
+  /// Clear error
   void clearError() {
     _error = null;
     notifyListeners();
   }
 
-  // Parse offer from API response
+  /// Parse offer from API response
   OfferModel _parseOfferFromApi(Map<String, dynamic> json) {
     final type = json['type'] as String;
     String badge = '';
@@ -249,6 +296,7 @@ Future<void> loadItemsWithOffers() async {
     );
   }
 
+  /// Get gradient colors for offer type
   List<Color> _getGradientColors(String? bannerColor, String type) {
     if (bannerColor != null && bannerColor.isNotEmpty) {
       try {
@@ -258,7 +306,6 @@ Future<void> loadItemsWithOffers() async {
           baseColor.withOpacity(0.7),
         ];
       } catch (e) {
-        debugPrint('Error parsing banner color: $e');
       }
     }
 
@@ -277,6 +324,7 @@ Future<void> loadItemsWithOffers() async {
     }
   }
 
+  /// Convert hex color to Flutter Color
   Color _hexToColor(String hex) {
     hex = hex.replaceAll('#', '');
     if (hex.length == 6) {

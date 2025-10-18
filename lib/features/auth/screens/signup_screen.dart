@@ -106,7 +106,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   SizedBox(height: 40.h),
                   Text(
-                    'Join ${AppStrings.appName}',
+  AppStrings.get('joinApp').replaceAll('{appName}', AppStrings.appName),
                     style: TextStyle(
                       fontSize: 48.sp,
                       fontWeight: FontWeight.w800,
@@ -116,7 +116,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   SizedBox(height: 20.h),
                   Text(
-                    'Create your account and start your journey with us. Experience the best shopping platform designed for you.',
+  AppStrings.get('createAccountDescription'),
                     style: TextStyle(
                       fontSize: 18.sp,
                       color: AppColors.textLight,
@@ -194,54 +194,53 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  Widget _buildFeatureList() {
-    final features = [
-      'Secure and fast checkout',
-      'Personalized recommendations',
-      'Exclusive member benefits',
-      '24/7 customer support',
-    ];
+ Widget _buildFeatureList() {
+  final features = [
+    AppStrings.get('secureCheckout'),
+    AppStrings.get('personalizedRecommendations'),
+    AppStrings.get('exclusiveBenefits'),
+    AppStrings.get('customerSupport'),
+  ];
 
-    return Column(
-      children: features.map((feature) => Padding(
-        padding: EdgeInsets.only(bottom: 16.h),
-        child: Row(
-          children: [
-            Container(
-              width: 24.w,
-              height: 24.w,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Icon(
-                Icons.check,
-                color: AppColors.primary,
-                size: 16.sp,
+  return Column(
+    children: features.map((feature) => Padding(
+      padding: EdgeInsets.only(bottom: 16.h),
+      child: Row(
+        children: [
+          Container(
+            width: 24.w,
+            height: 24.w,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(
+              Icons.check,
+              color: AppColors.primary,
+              size: 16.sp,
+            ),
+          ),
+          SizedBox(width: 16.w),
+          Expanded(
+            child: Text(
+              feature,
+              style: TextStyle(
+                fontSize: 16.sp,
+                color: AppColors.textMedium,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Text(
-                feature,
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  color: AppColors.textMedium,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-      )).toList(),
-    );
-  }
-
+          ),
+        ],
+      ),
+    )).toList(),
+  );
+}
   Widget _buildFormHeader() {
     return Column(
       children: [
         Text(
-          'Create Account',
+  AppStrings.get('createAccount'),
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: _isLargeScreen ? 32.sp : 28.sp,
@@ -252,7 +251,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
         SizedBox(height: 12.h),
         Text(
-          'Fill in your details to get started',
+  AppStrings.get('fillInDetails'),
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16.sp,
@@ -269,7 +268,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Create Account',
+  AppStrings.get('createAccount'),
           style: TextStyle(
             fontSize: 28.sp,
             fontWeight: FontWeight.w700,
@@ -279,7 +278,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
         SizedBox(height: 8.h),
         Text(
-          'Sign up to get started with ${AppStrings.appName}.',
+  AppStrings.get('signUpToStart').replaceAll('{appName}', AppStrings.appName),
           style: TextStyle(
             fontSize: 16.sp,
             color: AppColors.textLight,
@@ -547,7 +546,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             color: AppColors.textMedium,
           ),
           children: [
-            const TextSpan(text: AppStrings.alreadyHaveAccount),
+             TextSpan(text: AppStrings.alreadyHaveAccount),
             const TextSpan(text: ' '),
             WidgetSpan(
               child: GestureDetector(
@@ -579,27 +578,33 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _passwordController.text,
     );
 
-    if (success) {
-      if (mounted) {
-        // Check if email verification is required
-        if (authProvider.requiresVerification) {
-          // Navigate to email verification screen
-          context.go(
-            '${AppRoutes.emailVerification}?email=${Uri.encodeComponent(_emailController.text.trim())}',
-          );
-        } else {
-          // Direct login (backward compatibility)
-          context.go(AppRoutes.home);
-        }
-      }
-    } else {
-      if (mounted) {
+    if (success && mounted) {
+      // API returns success with requiresVerification flag
+      if (authProvider.requiresVerification) {
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              authProvider.error ?? AppStrings.failedToCreateAccount,
+    content: Text(AppStrings.get('verificationCodeSent')),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.r),
             ),
-            backgroundColor: AppColors.error,
+            margin: EdgeInsets.all(16.w),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        
+        // Navigate to OTP verification screen
+        context.go(
+          '${AppRoutes.emailVerification}?email=${Uri.encodeComponent(_emailController.text.trim())}',
+        );
+      } else {
+        // Direct login (shouldn't happen with new API, but kept for safety)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+    content: Text(AppStrings.get('accountCreatedSuccess')),
+            backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10.r),
@@ -607,7 +612,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
             margin: EdgeInsets.all(16.w),
           ),
         );
+        context.go(AppRoutes.home);
       }
+    } else if (mounted) {
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authProvider.error ?? AppStrings.failedToCreateAccount,
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.r),
+          ),
+          margin: EdgeInsets.all(16.w),
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 }

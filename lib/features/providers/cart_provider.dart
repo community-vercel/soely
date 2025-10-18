@@ -9,19 +9,28 @@ class CartProvider extends ChangeNotifier {
   final List<CartItem> _items = [];
   final Uuid _uuid = const Uuid();
   static const String _cartKey = 'cart_items';
+  static const String _deliveryFeeKey = 'delivery_fee';
   bool _isInitialized = false;
+  double _deliveryFee = 0.0;
 
   List<CartItem> get items => List.unmodifiable(_items);
   int get itemCount => _items.length;
   int get totalQuantity => _items.fold(0, (sum, item) => sum + item.quantity);
   
   double get subtotal => _items.fold(0.0, (sum, item) => sum + item.totalPrice);
-  double get deliveryFee => subtotal > 0 ? 0.0 : 0.0;
-  double get total => subtotal + deliveryFee;
+  double get deliveryFee => _deliveryFee;
+  double get total => subtotal + _deliveryFee;
 
   bool get isEmpty => _items.isEmpty;
   bool get isNotEmpty => _items.isNotEmpty;
   bool get isInitialized => _isInitialized;
+
+  // Set delivery fee from CheckoutProvider
+  void setDeliveryFee(double fee) {
+    _deliveryFee = fee;
+    _saveDeliveryFee();
+    notifyListeners();
+  }
 
   // Initialize and load cart from storage
   Future<void> initialize() async {
@@ -29,9 +38,9 @@ class CartProvider extends ChangeNotifier {
     
     try {
       await _loadCart();
+      await _loadDeliveryFee();
       _isInitialized = true;
     } catch (e) {
-      debugPrint('Error initializing cart: $e');
       _isInitialized = true;
     }
     notifyListeners();
@@ -51,7 +60,16 @@ class CartProvider extends ChangeNotifier {
         );
       }
     } catch (e) {
-      debugPrint('Error loading cart: $e');
+    }
+  }
+
+  // Load delivery fee from shared preferences
+  Future<void> _loadDeliveryFee() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final fee = prefs.getDouble(_deliveryFeeKey) ?? 0.0;
+      _deliveryFee = fee;
+    } catch (e) {
     }
   }
 
@@ -64,11 +82,19 @@ class CartProvider extends ChangeNotifier {
       );
       await prefs.setString(_cartKey, cartJson);
     } catch (e) {
-      debugPrint('Error saving cart: $e');
     }
   }
 
-void addItem({
+  // Save delivery fee to shared preferences
+  Future<void> _saveDeliveryFee() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_deliveryFeeKey, _deliveryFee);
+    } catch (e) {
+    }
+  }
+
+  void addItem({
     required FoodItem foodItem,
     int quantity = 1,
     MealSize? selectedMealSize,
@@ -76,34 +102,27 @@ void addItem({
     List<Addon> selectedAddons = const [],
     String? specialInstructions,
   }) {
-    // Calculate total price
     double basePrice = foodItem.price;
     
-    // Add meal size price only if it's not 0
     if (selectedMealSize != null && selectedMealSize.additionalPrice <= 0) {
       basePrice += selectedMealSize.additionalPrice;
-    }
-    else if(selectedMealSize != null){
-            basePrice = selectedMealSize!.additionalPrice;
-
-    }
-    else{
-       basePrice = foodItem.price;
+    } else if (selectedMealSize != null) {
+      basePrice = selectedMealSize.additionalPrice;
+    } else {
+      basePrice = foodItem.price;
     }
     
-    // Add extras
     for (final extra in selectedExtras) {
       basePrice += extra.price;
     }
     
-    // Add addons
     for (final addon in selectedAddons) {
       basePrice += addon.price;
     }
     
+    final unitPrice = basePrice;
     final totalPrice = basePrice * quantity;
 
-    // Check if same item with same customizations already exists
     final existingIndex = _items.indexWhere((item) =>
         item.foodItem.id == foodItem.id &&
         item.selectedMealSize?.id == selectedMealSize?.id &&
@@ -112,17 +131,16 @@ void addItem({
         item.specialInstructions == specialInstructions);
 
     if (existingIndex != -1) {
-      // Update existing item quantity and price
       final existingItem = _items[existingIndex];
       final newQuantity = existingItem.quantity + quantity;
-      final newTotalPrice = basePrice * newQuantity;
+      final newTotalPrice = unitPrice * newQuantity;
       
       _items[existingIndex] = existingItem.copyWith(
         quantity: newQuantity,
+        unitPrice: unitPrice,
         totalPrice: newTotalPrice,
       );
     } else {
-      // Add new item
       final cartItem = CartItem(
         id: _uuid.v4(),
         foodItem: foodItem,
@@ -131,14 +149,16 @@ void addItem({
         selectedExtras: selectedExtras,
         selectedAddons: selectedAddons,
         specialInstructions: specialInstructions,
+        unitPrice: unitPrice,
         totalPrice: totalPrice,
       );
       _items.add(cartItem);
     }
     
-    _saveCart(); // Save to storage
+    _saveCart();
     notifyListeners();
   }
+
   void updateItemQuantity(String itemId, int newQuantity) {
     if (newQuantity <= 0) {
       removeItem(itemId);
@@ -148,27 +168,30 @@ void addItem({
     final index = _items.indexWhere((item) => item.id == itemId);
     if (index != -1) {
       final item = _items[index];
-      final basePrice = item.totalPrice / item.quantity;
-      final newTotalPrice = basePrice * newQuantity;
+      final unitPrice = item.unitPrice;
+      final newTotalPrice = unitPrice * newQuantity;
       
       _items[index] = item.copyWith(
         quantity: newQuantity,
+        unitPrice: unitPrice,
         totalPrice: newTotalPrice,
       );
-      _saveCart(); // Save to storage
+      _saveCart();
       notifyListeners();
     }
   }
 
   void removeItem(String itemId) {
     _items.removeWhere((item) => item.id == itemId);
-    _saveCart(); // Save to storage
+    _saveCart();
     notifyListeners();
   }
 
   void clearCart() {
     _items.clear();
-    _saveCart(); // Save to storage
+    _deliveryFee = 0.0;
+    _saveDeliveryFee();
+    _saveCart();
     notifyListeners();
   }
 
@@ -187,7 +210,6 @@ void addItem({
         .fold(0, (sum, item) => sum + item.quantity);
   }
 
-  // Helper method to compare lists
   bool _listsEqual<T>(List<T> list1, List<T> list2) {
     if (list1.length != list2.length) return false;
     
@@ -198,7 +220,7 @@ void addItem({
     return true;
   }
 
-  // Get frequently bought together items (mock implementation)
   List<FoodItem> getFrequentlyBoughtTogether() {
     return [];
-  }}
+  }
+}

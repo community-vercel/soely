@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
+import 'package:soely/core/services/language_service.dart';
 
 // Main Offer Model
 class OfferModel extends Equatable {
@@ -280,6 +281,7 @@ class SimpleOffer extends Equatable {
 }
 
 // Category Info (used in FoodItemWithOffer)
+
 class CategoryInfo extends Equatable {
   final String id;
   final String name;
@@ -294,12 +296,36 @@ class CategoryInfo extends Equatable {
   @override
   List<Object?> get props => [id, name, icon];
 
-  factory CategoryInfo.fromJson(Map<String, dynamic> json) {
-    return CategoryInfo(
-      id: json['_id'] as String,
-      name: json['name'] as String,
-      icon: json['icon'] as String?,
-    );
+  factory CategoryInfo.fromJson(
+    Map<String, dynamic> json, {
+    String? currentLanguage,
+  }) {
+    try {
+      final language = currentLanguage ?? LanguageService.spanish;
+
+      // ✅ Handle multilingual category name
+      String categoryName = '';
+      if (json['name'] is Map) {
+        categoryName = FoodItemWithOffer._getTextInLanguage(
+          json['name'],
+          language,
+          fallback: 'Unknown',
+        );
+      } else {
+        categoryName = json['name']?.toString() ?? 'Unknown';
+      }
+
+      return CategoryInfo(
+        id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+        name: categoryName,
+        icon: json['icon']?.toString(),
+      );
+    } catch (e) {
+      return const CategoryInfo(
+        id: 'unknown',
+        name: 'Unknown Category',
+      );
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -323,6 +349,7 @@ class CategoryInfo extends Equatable {
   }
 }
 
+// ... SimpleOffer class remains same ...
 // Food Item with Offer (from items-with-offers endpoint)
 class FoodItemWithOffer extends Equatable {
   final String id;
@@ -366,73 +393,109 @@ class FoodItemWithOffer extends Equatable {
         discountPercentage,
       ];
 
-  factory FoodItemWithOffer.fromJson(Map<String, dynamic> json) {
-    return FoodItemWithOffer(
-      id: json['_id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String? ?? '',
-      price: (json['price'] as num).toDouble(),
-      imageUrl: json['imageUrl'] as String,
-      category: CategoryInfo.fromJson(json['category'] as Map<String, dynamic>),
-      isActive: json['isActive'] as bool? ?? true,
-      offer: json['offer'] != null 
-        ? SimpleOffer.fromJson(json['offer'] as Map<String, dynamic>)
-        : null,
-      discountedPrice: (json['discountedPrice'] as num).toDouble(),
-      savings: (json['savings'] as num).toDouble(),
-      discountPercentage: json['discountPercentage'] as int,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      '_id': id,
-      'name': name,
-      'description': description,
-      'price': price,
-      'imageUrl': imageUrl,
-      'category': category.toJson(),
-      'isActive': isActive,
-      'offer': offer?.toJson(),
-      'discountedPrice': discountedPrice,
-      'savings': savings,
-      'discountPercentage': discountPercentage,
-    };
-  }
-
-  bool get hasOffer => offer != null && savings > 0;
-
-  String get discountDisplay {
-    if (!hasOffer) return '';
-    return '$discountPercentage% OFF';
-  }
-
-  FoodItemWithOffer copyWith({
-    String? id,
-    String? name,
-    String? description,
-    double? price,
-    String? imageUrl,
-    CategoryInfo? category,
-    bool? isActive,
-    SimpleOffer? offer,
-    double? discountedPrice,
-    double? savings,
-    int? discountPercentage,
+  /// ✅ CRITICAL: Get text in specific language
+  static String _getTextInLanguage(
+    dynamic value,
+    String targetLanguage, {
+    String fallback = '',
   }) {
-    return FoodItemWithOffer(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      description: description ?? this.description,
-      price: price ?? this.price,
-      imageUrl: imageUrl ?? this.imageUrl,
-      category: category ?? this.category,
-      isActive: isActive ?? this.isActive,
-      offer: offer ?? this.offer,
-      discountedPrice: discountedPrice ?? this.discountedPrice,
-      savings: savings ?? this.savings,
-      discountPercentage: discountPercentage ?? this.discountPercentage,
-    );
+    if (value == null) return fallback;
+
+    // If it's already a string, use it
+    if (value is String) return value.isNotEmpty ? value : fallback;
+
+    // If it's a multilingual Map
+    if (value is Map) {
+      // Try target language first
+      if (value[targetLanguage] != null) {
+        final text = value[targetLanguage].toString().trim();
+        if (text.isNotEmpty) {
+          return text;
+        }
+      }
+
+      // Fallback chain
+      const fallbackChain = ['en', 'es', 'ca', 'ar'];
+      for (final lang in fallbackChain) {
+        if (value[lang] != null) {
+          final text = value[lang].toString().trim();
+          if (text.isNotEmpty) {
+            return text;
+          }
+        }
+      }
+    }
+
+    return fallback;
   }
-  
+
+  factory FoodItemWithOffer.fromJson(
+    Map<String, dynamic> json, {
+    String? currentLanguage,
+  }) {
+    try {
+      // ✅ CRITICAL: Get language from parameter or LanguageService
+      final language = currentLanguage ?? LanguageService.spanish;
+
+
+      // ✅ Parse name with language
+      final name = _getTextInLanguage(
+        json['name'],
+        language,
+        fallback: 'Unknown Item',
+      );
+
+      // ✅ Parse description with language
+      final description = _getTextInLanguage(
+        json['description'],
+        language,
+        fallback: '',
+      );
+
+      // Parse category
+      final categoryJson = json['category'];
+      CategoryInfo category;
+
+      if (categoryJson is Map) {
+        category = CategoryInfo.fromJson(
+          categoryJson as Map<String, dynamic>,
+          currentLanguage: language,
+        );
+      } else {
+        category = const CategoryInfo(
+          id: 'unknown',
+          name: 'Unknown Category',
+        );
+      }
+
+      // Parse offer
+      SimpleOffer? offerData;
+      if (json['offer'] != null && json['offer'] is Map) {
+        offerData = SimpleOffer.fromJson(json['offer'] as Map<String, dynamic>);
+      }
+
+      final result = FoodItemWithOffer(
+        id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+        name: name,
+        description: description,
+        price: (json['price'] as num?)?.toDouble() ?? 0.0,
+        imageUrl: json['imageUrl']?.toString() ?? '',
+        category: category,
+        isActive: json['isActive'] as bool? ?? true,
+        offer: offerData,
+        discountedPrice: (json['discountedPrice'] as num?)?.toDouble() ??
+            (json['price'] as num?)?.toDouble() ??
+            0.0,
+        savings: (json['savings'] as num?)?.toDouble() ?? 0.0,
+        discountPercentage: json['discountPercentage'] as int? ?? 0,
+      );
+
+      return result;
+    } catch (e, stackTrace) {
+   
+      rethrow;
+    }
+  }
+
 }
+

@@ -7,18 +7,25 @@ enum OrderStatus {
   confirmed,
   preparing,
   ready,
-  outForDelivery,
+  pickup,      // For pickup orders
+  shop,        // For shop orders
+  outForDelivery, // For delivery orders
   delivered,
-  cancelled
+  cancelled,
+  refunded
 }
 
 enum PaymentMethod {
   cashOnDelivery,
+  shop,
   card,
   paypal,
   stripe
 }
-
+enum CodPaymentType {
+  cash,
+  card,
+}
 enum PaymentStatus {
   pending,
   paid,
@@ -53,6 +60,7 @@ class Order extends Equatable {
   final String? branchName;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final CodPaymentType? codPaymentType; // NEW
 
   const Order({
     required this.id,
@@ -76,6 +84,8 @@ class Order extends Equatable {
     this.branchName,
     required this.createdAt,
     required this.updatedAt,
+        this.codPaymentType,
+
   });
 
   @override
@@ -174,6 +184,8 @@ class Order extends Equatable {
       'branchName': branchName,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+            if (codPaymentType != null) 'codPaymentType': codPaymentType!.name,
+
     };
   }
 
@@ -207,11 +219,22 @@ class Order extends Equatable {
         : null,
     actualDeliveryTime: map['actualDeliveryTime'] != null
         ? DateTime.parse(map['actualDeliveryTime'])
+        
+
         : null,
+
+codPaymentType: map['codPaymentType'] != null 
+          ? CodPaymentType.values.firstWhere(
+              (e) => e.name == map['codPaymentType'],
+              orElse: () => CodPaymentType.cash,
+            )
+          : null,
+        
     branchId: map['branchId'] ?? '',
     branchName: map['branchName'],
     createdAt: DateTime.parse(map['createdAt'] ?? DateTime.now().toIso8601String()),
     updatedAt: DateTime.parse(map['updatedAt'] ?? DateTime.now().toIso8601String()),
+
   );
 }
   static OrderStatus _parseOrderStatus(dynamic status) {
@@ -281,19 +304,21 @@ class Order extends Equatable {
   }
 }
 
-class DeliveryAddress extends Equatable {
+// Update your DeliveryAddress class in order.dart
+
+class DeliveryAddress {
   final String id;
-  final String type; // home, work, other
+  final String? type;
   final String address;
   final String? apartment;
   final String? instructions;
   final double? latitude;
   final double? longitude;
-  final bool isDefault;
+  bool isDefault;
 
-  const DeliveryAddress({
+  DeliveryAddress({
     required this.id,
-    required this.type,
+    this.type,
     required this.address,
     this.apartment,
     this.instructions,
@@ -302,17 +327,31 @@ class DeliveryAddress extends Equatable {
     this.isDefault = false,
   });
 
-  @override
-  List<Object?> get props => [
-        id,
-        type,
-        address,
-        apartment,
-        instructions,
-        latitude,
-        longitude,
-        isDefault,
-      ];
+  factory DeliveryAddress.fromMap(Map<String, dynamic> map) {
+    return DeliveryAddress(
+      id: map['_id']?.toString() ?? map['id']?.toString() ?? '',
+      type: map['type']?.toString(),
+      address: map['address']?.toString() ?? '',
+      apartment: map['apartment']?.toString(),
+      instructions: map['instructions']?.toString(),
+      latitude: map['latitude'] != null ? (map['latitude'] as num).toDouble() : null,
+      longitude: map['longitude'] != null ? (map['longitude'] as num).toDouble() : null,
+      isDefault: map['isDefault'] == true,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'type': type,
+      'address': address,
+      'apartment': apartment,
+      'instructions': instructions,
+      'latitude': latitude,
+      'longitude': longitude,
+      'isDefault': isDefault,
+    };
+  }
 
   DeliveryAddress copyWith({
     String? id,
@@ -333,32 +372,6 @@ class DeliveryAddress extends Equatable {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       isDefault: isDefault ?? this.isDefault,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'type': type,
-      'address': address,
-      'apartment': apartment,
-      'instructions': instructions,
-      'latitude': latitude,
-      'longitude': longitude,
-      'isDefault': isDefault,
-    };
-  }
-
-  factory DeliveryAddress.fromMap(Map<String, dynamic> map) {
-    return DeliveryAddress(
-      id: map['_id'] ?? map['id'] ?? '',
-      type: map['type'] ?? 'other',
-      address: map['address'] ?? '',
-      apartment: map['apartment'],
-      instructions: map['instructions'],
-      latitude: map['latitude']?.toDouble(),
-      longitude: map['longitude']?.toDouble(),
-      isDefault: map['isDefault'] ?? false,
     );
   }
 }

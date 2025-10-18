@@ -272,7 +272,6 @@ class _DynamicPromotionalBannerState extends State<DynamicPromotionalBanner> {
 
     return GestureDetector(
       onTap: banner.link != null ? () {
-        debugPrint('Navigate to: ${banner.link}');
       } : null,
       child: Container(
         width: double.infinity,

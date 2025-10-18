@@ -73,15 +73,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
       _startResendTimer();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Reset code sent to your email'),
+         SnackBar(
+      content: Text(AppStrings.get('resetCodeSent')),
           backgroundColor: Colors.green,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.error ?? 'Failed to send reset code'),
+      content: Text(authProvider.error ?? AppStrings.get('failedToSendResetCode')),
           backgroundColor: Colors.red,
         ),
       );
@@ -91,8 +91,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _verifyOTP() async {
     if (_otpController.text.trim().length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid 6-digit code'),
+         SnackBar(
+      content: Text(AppStrings.get('invalid6DigitCode')),
           backgroundColor: Colors.red,
         ),
       );
@@ -112,15 +112,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _otpVerified = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Code verified successfully'),
+         SnackBar(
+      content: Text(AppStrings.get('codeVerified')),
           backgroundColor: Colors.green,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.error ?? 'Invalid or expired code'),
+      content: Text(authProvider.error ?? AppStrings.get('invalidOrExpiredCode')),
           backgroundColor: Colors.red,
         ),
       );
@@ -141,8 +141,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password reset successful!'),
+         SnackBar(
+      content: Text(AppStrings.get('passwordResetSuccess')),
           backgroundColor: Colors.green,
         ),
       );
@@ -150,7 +150,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.error ?? 'Failed to reset password'),
+      content: Text(authProvider.error ?? AppStrings.get('failedToResetPassword')),
           backgroundColor: Colors.red,
         ),
       );
@@ -166,15 +166,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (success) {
       _startResendTimer();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('New code sent to your email'),
+         SnackBar(
+      content: Text(AppStrings.get('newCodeSent')),
           backgroundColor: Colors.green,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.error ?? 'Failed to send code'),
+      content: Text(authProvider.error ?? AppStrings.get('failedToSendCode')),
           backgroundColor: Colors.red,
         ),
       );
@@ -189,7 +189,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Reset Password',
+  AppStrings.get('resetPassword'),
           style: TextStyle(fontSize: isWebMobile ? 18 : null),
         ),
         leading: IconButton(
@@ -263,17 +263,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       if (!_otpVerified)
                         CustomTextField(
                           controller: _emailController,
-                          labelText: 'Email',
-                          hintText: 'Enter your email',
+                           labelText: AppStrings.get('email'),
+  hintText: AppStrings.get('enterYourEmail'),
                           keyboardType: TextInputType.emailAddress,
                           prefixIcon: Icons.email,
                           enabled: !_emailSent,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter your email';
+      return AppStrings.get('pleaseEnterEmail');
                             }
                             if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                              return 'Please enter a valid email';
+      return AppStrings.get('pleaseEnterValidEmail');
                             }
                             return null;
                           },
@@ -284,17 +284,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         SizedBox(height: isWebMobile ? 14 : 16.h),
                         CustomTextField(
                           controller: _otpController,
-                          labelText: 'Verification Code',
-                          hintText: 'Enter 6-digit code',
+                        labelText: AppStrings.get('verificationCode'),
+  hintText: AppStrings.get('enter6DigitCode'),
                           keyboardType: TextInputType.number,
                           prefixIcon: Icons.security,
                           maxLength: 6,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter the code';
+      return AppStrings.get('pleaseEnterCode');
                             }
                             if (value.length != 6) {
-                              return 'Code must be 6 digits';
+      return AppStrings.get('codeMustBe6Digits');
                             }
                             return null;
                           },
@@ -304,62 +304,61 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       // Password fields (visible after OTP verified)
                       if (_otpVerified) ...[
                         SizedBox(height: isWebMobile ? 14 : 16.h),
-                        CustomTextField(
-                          controller: _passwordController,
-                          labelText: 'New Password',
-                          hintText: 'Enter new password',
-                          obscureText: _obscurePassword,
-                          prefixIcon: Icons.lock,
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                              size: isWebMobile ? 20 : null,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter a password';
-                            }
-                            if (value.length < 6) {
-                              return 'Password must be at least 6 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: isWebMobile ? 14 : 16.h),
-                        CustomTextField(
-                          controller: _confirmPasswordController,
-                          labelText: 'Confirm Password',
-                          hintText: 'Re-enter new password',
-                          obscureText: _obscureConfirmPassword,
-                          prefixIcon: Icons.lock,
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                              size: isWebMobile ? 20 : null,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureConfirmPassword = !_obscureConfirmPassword;
-                              });
-                            },
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please confirm your password';
-                            }
-                            if (value != _passwordController.text) {
-                              return 'Passwords do not match';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
+                     CustomTextField(
+  controller: _passwordController,
+  labelText: AppStrings.get('newPassword'),
+  hintText: AppStrings.get('enterNewPassword'),
+  obscureText: _obscurePassword,
+  prefixIcon: Icons.lock,
+  suffixIcon: IconButton(
+    icon: Icon(
+      _obscurePassword ? Icons.visibility : Icons.visibility_off,
+      size: isWebMobile ? 20 : null,
+    ),
+    onPressed: () {
+      setState(() {
+        _obscurePassword = !_obscurePassword;
+      });
+    },
+  ),
+  validator: (value) {
+    if (value == null || value.isEmpty) {
+      return AppStrings.get('pleaseEnterPassword');
+    }
+    if (value.length < 6) {
+      return AppStrings.get('passwordMinLength');
+    }
+    return null;
+  },
+),
+ SizedBox(height: isWebMobile ? 14 : 16.h),
+                    CustomTextField(
+  controller: _confirmPasswordController,
+  labelText: AppStrings.get('confirmPassword'),
+  hintText: AppStrings.get('reEnterNewPassword'),
+  obscureText: _obscureConfirmPassword,
+  prefixIcon: Icons.lock,
+  suffixIcon: IconButton(
+    icon: Icon(
+      _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+      size: isWebMobile ? 20 : null,
+    ),
+    onPressed: () {
+      setState(() {
+        _obscureConfirmPassword = !_obscureConfirmPassword;
+      });
+    },
+  ),
+  validator: (value) {
+    if (value == null || value.isEmpty) {
+      return AppStrings.get('pleaseConfirmPassword');
+    }
+    if (value != _passwordController.text) {
+      return AppStrings.get('passwordsDoNotMatch');
+    }
+    return null;
+  },
+), ],
                       
                       SizedBox(height: isWebMobile ? 20 : 24.h),
                       
@@ -381,9 +380,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ),
                           ),
                           child: Text(
-                            _resendCountdown > 0
-                                ? 'Resend code in ${_resendCountdown}s'
-                                : 'Resend Code',
+                               _resendCountdown > 0
+        ? AppStrings.get('resendCodeCountdown').replaceAll('{seconds}', '$_resendCountdown')
+        : AppStrings.get('resendCode'),
                             style: TextStyle(
                               fontSize: isWebMobile ? 13 : 14,
                               color: _resendCountdown > 0 ? Colors.grey : AppColors.primary,
@@ -395,21 +394,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       SizedBox(height: isWebMobile ? 12 : 16.h),
                       
                       // Back to login
-                      TextButton(
-                        onPressed: () => context.go(AppRoutes.login),
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.symmetric(
-                            vertical: isWebMobile ? 8 : 10,
-                          ),
-                        ),
-                        child: Text(
-                          'Back to Login',
-                          style: TextStyle(
-                            fontSize: isWebMobile ? 13 : 14,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 20),
+                    TextButton(
+  onPressed: () => context.go(AppRoutes.login),
+  style: TextButton.styleFrom(
+    padding: EdgeInsets.symmetric(
+      vertical: isWebMobile ? 8 : 10,
+    ),
+  ),
+  child: Text(
+    AppStrings.get('backToLogin'),
+    style: TextStyle(
+      fontSize: isWebMobile ? 13 : 14,
+    ),
+  ),
+), SizedBox(height: 20),
                     ],
                   ),
                 ),
@@ -421,36 +419,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  String _getTitle() {
-    if (_otpVerified) {
-      return 'Create New Password';
-    } else if (_emailSent) {
-      return 'Verify Code';
-    } else {
-      return 'Forgot Password?';
-    }
+ String _getTitle() {
+  if (_otpVerified) {
+    return AppStrings.get('createNewPassword');
+  } else if (_emailSent) {
+    return AppStrings.get('verifyCode');
+  } else {
+    return AppStrings.get('forgotPassword');
   }
+}
 
-  String _getSubtitle() {
-    if (_otpVerified) {
-      return 'Please enter your new password';
-    } else if (_emailSent) {
-      return 'Enter the 6-digit code sent to ${_emailController.text}';
-    } else {
-      return 'Enter your email to receive a reset code';
-    }
+String _getSubtitle() {
+  if (_otpVerified) {
+    return AppStrings.get('enterNewPasswordSubtitle');
+  } else if (_emailSent) {
+    return AppStrings.get('enterCodeSubtitle').replaceAll('{email}', _emailController.text);
+  } else {
+    return AppStrings.get('enterEmailSubtitle');
   }
+}
 
   String _getButtonText() {
-    if (_otpVerified) {
-      return 'Reset Password';
-    } else if (_emailSent) {
-      return 'Verify Code';
-    } else {
-      return 'Send Reset Code';
-    }
+  if (_otpVerified) {
+    return AppStrings.get('resetPasswordButton');
+  } else if (_emailSent) {
+    return AppStrings.get('verifyCodeButton');
+  } else {
+    return AppStrings.get('sendResetCode');
   }
-
+}
   VoidCallback _getButtonAction() {
     if (_otpVerified) {
       return _resetPassword;

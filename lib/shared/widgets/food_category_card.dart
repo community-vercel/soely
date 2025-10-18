@@ -20,7 +20,7 @@ class FoodCategoryCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+   Widget build(BuildContext context) {
     final colorScheme = _getCategoryColorScheme(category.name);
     final cardWidth = _isWeb(context) ? 120.w : 100.w;
     final iconSize = _isWeb(context) ? 90.w : 80.w;
@@ -29,7 +29,10 @@ class FoodCategoryCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        onTap();
+        context.go(AppRoutes.menu, extra: {
+          'category': category.id,
+          'selectedIndex': 1, // Explicitly set Menu index
+        });
       },
       child: Container(
         width: cardWidth,
@@ -193,7 +196,6 @@ class CategoryColorScheme {
   });
 }
 
-// Categories slider
 Widget buildCategoriesSlider(
   HomeProvider provider,
   BuildContext context,
@@ -203,16 +205,26 @@ Widget buildCategoriesSlider(
     return const SizedBox.shrink();
   }
 
+  // Get actual screen width
+  final screenWidth = MediaQuery.of(context).size.width;
+  final isSmallScreen = screenWidth < 600;
+  final isMediumScreen = screenWidth >= 600 && screenWidth < 1024;
+  
+  // Responsive values
+  final topMargin = isSmallScreen ? 14.0 : (isMediumScreen ? 18.0 : 22.0);
+  final sliderHeight = isSmallScreen ? 130.0 : (isMediumScreen ? 150.0 : 180.0);
+  final horizontalPadding = isSmallScreen ? 8.0 : 16.0;
+
   return Container(
-    margin: EdgeInsets.only(top: _isWeb(context) ? 22.h : 14.h),
+    margin: EdgeInsets.only(top: topMargin),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          height: _isWeb(context) ? 180.h : 130.h,
+          height: sliderHeight,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: _isWeb(context) ? 2.w : 2.w),
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
             physics: const BouncingScrollPhysics(),
             itemCount: provider.categories.length,
             itemBuilder: (context, index) {
@@ -233,6 +245,10 @@ Widget buildCategoriesSlider(
   );
 }
 
+// Helper function if you need it elsewhere
+bool _isSmallScreen(BuildContext context) {
+  return MediaQuery.of(context).size.width < 600;
+}
 bool _isWeb(BuildContext context) {
   return MediaQuery.of(context).size.width > 600;
 

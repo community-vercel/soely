@@ -188,7 +188,7 @@ onPressed: () {
         ),
         SizedBox(height: isLargeScreen ? 12.h : 8.h),
         Text(
-          'Welcome back! Please enter your credentials.',
+        AppStrings.get('welcomeBack'),
           style: TextStyle(
             fontSize: isLargeScreen ? 18.sp : 16.sp,
             color: AppColors.textLight,
@@ -208,7 +208,7 @@ onPressed: () {
             color: AppColors.textMedium,
           ),
           children: [
-            const TextSpan(text: AppStrings.dontHaveAccount),
+             TextSpan(text: AppStrings.dontHaveAccount),
             const TextSpan(text: ' '),
             WidgetSpan(
               child: GestureDetector(
@@ -245,7 +245,7 @@ onPressed: () {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(AppStrings.failedToLogin),
+            content:  Text(AppStrings.failedToLogin),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(

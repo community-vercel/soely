@@ -23,12 +23,10 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint("OrderStatusScreen: orderId = ${widget.orderId}");
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.orderId.isNotEmpty) {
         context.read<OrderProvider>().loadOrder(widget.orderId);
       } else {
-        debugPrint("Error: Empty orderId in OrderStatusScreen");
         context.read<OrderProvider>().notifyListeners();
       }
     });
@@ -79,7 +77,8 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
           }
 
           if (provider.error != null || provider.currentOrder == null) {
-            return _buildErrorState(provider.error ?? 'Order not found');
+return _buildErrorState(provider.error ?? AppStrings.get('orderNotFound'));
+
           }
 
           final order = provider.currentOrder!;
@@ -110,7 +109,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
       elevation: 0,
       centerTitle: true,
       leading: IconButton(
-        onPressed: () => context.go(AppRoutes.home),
+        onPressed: () => context.go(AppRoutes.orders),
         icon: Icon(
           Icons.arrow_back_ios_new_rounded,
           color: AppColors.textDark,
@@ -248,7 +247,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             SizedBox(
               width: 200,
               child: CustomButton(
-                text: 'Go Back',
+  text: AppStrings.get('goBack'),
                 onPressed: () => context.go(AppRoutes.home),
               ),
             ),
@@ -318,156 +317,181 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
     );
   }
 
-  Widget _buildDeliveryTime(Order order) {
-    return Container(
-      padding: EdgeInsets.all(isDesktop ? 48 : (isTablet ? 40 : 32)),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+ Widget _buildDeliveryTime(Order order) {
+  final bool isPickupOrder = order.deliveryType == DeliveryType.pickup || 
+                             order.deliveryType == DeliveryType.delivery;
+  
+  return Container(
+    padding: EdgeInsets.all(isDesktop ? 48 : (isTablet ? 40 : 32)),
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [AppColors.primary, AppColors.primaryDark],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(24),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.primary.withOpacity(0.4),
+          blurRadius: 24,
+          offset: const Offset(0, 8),
         ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.4),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+      ],
+    ),
+    child: Column(
+      children: [
+        Text(
+          isPickupOrder ?  AppStrings.get("readyIn"): AppStrings.estimatedDelivery,
+          style: TextStyle(
+            fontSize: isDesktop ? 18 : 16,
+            color: Colors.white.withOpacity(0.95),
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            AppStrings.estimatedDelivery,
-            style: TextStyle(
-              fontSize: isDesktop ? 18 : 16,
-              color: Colors.white.withOpacity(0.95),
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
+        ),
+        const SizedBox(height: 16),
+        Text(
+         AppStrings.get('estimatedTime'),
+          style: TextStyle(
+            fontSize: isDesktop ? 64 : (isTablet ? 56 : 48),
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+            letterSpacing: -2,
+            height: 1,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 12,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+              width: 1,
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            '40 min',
-            style: TextStyle(
-              fontSize: isDesktop ? 64 : (isTablet ? 56 : 48),
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: -2,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 12,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.schedule_rounded,
-                  color: Colors.white,
-                  size: isDesktop ? 20 : 18,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  AppStrings.getYourOrder,
-                  style: TextStyle(
-                    fontSize: isDesktop ? 15 : 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrderProgress(Order order) {
-    return Container(
-      padding: EdgeInsets.all(isDesktop ? 36 : (isTablet ? 32 : 28)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.local_shipping_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
+              Icon(
+                isPickupOrder ? Icons.shopping_bag_rounded : Icons.schedule_rounded,
+                color: Colors.white,
+                size: isDesktop ? 20 : 18,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Text(
-                'Order Progress',
+                isPickupOrder ? AppStrings.get("readyIn") : AppStrings.getYourOrder,
                 style: TextStyle(
-                  fontSize: isDesktop ? 22 : (isTablet ? 20 : 18),
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
-                  letterSpacing: -0.5,
+                  fontSize: isDesktop ? 15 : 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  letterSpacing: 0.3,
                 ),
               ),
             ],
           ),
-          SizedBox(height: isDesktop ? 36 : 32),
+        ),
+      ],
+    ),
+  );
+}
+ 
+ Widget _buildOrderProgress(Order order) {
+  // Determine if this is a pickup/shop order or delivery order
+  final bool isPickupOrder = order.deliveryType == DeliveryType.pickup || 
+                             order.deliveryType == DeliveryType.delivery;
+  
+  return Container(
+    padding: EdgeInsets.all(isDesktop ? 36 : (isTablet ? 32 : 28)),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.06),
+          blurRadius: 24,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                isPickupOrder ? Icons.shopping_bag_rounded : Icons.local_shipping_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              AppStrings.get('orderProgress'),
+              style: TextStyle(
+                fontSize: isDesktop ? 22 : (isTablet ? 20 : 18),
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: isDesktop ? 36 : 32),
+        
+        // Common steps for all orders
+        _buildProgressStep(
+          AppStrings.orderPlaced,
+          true,
+          isFirst: true,
+        ),
+        _buildProgressStep(
+          AppStrings.orderConfirmed,
+          order.status.index >= OrderStatus.confirmed.index,
+        ),
+        _buildProgressStep(
+          AppStrings.preparing,
+          order.status.index >= OrderStatus.preparing.index,
+        ),
+        _buildProgressStep(
+          AppStrings.ready,
+          order.status.index >= OrderStatus.ready.index,
+        ),
+        
+        // Conditional steps based on order type
+        if (isPickupOrder) ...[
+          // For pickup orders: show "Ready for Pickup" or "Picked Up"
           _buildProgressStep(
-            AppStrings.orderPlaced,
-            true,
-            isFirst: true,
+             order.status == OrderStatus.shop ? AppStrings.get('collected') : AppStrings.get('readyForPickup'),
+    order.status == OrderStatus.pickup || order.status == OrderStatus.shop,
+    isLast: true,
+          ),
+        ] else ...[
+          // For delivery orders: show "Out for Delivery" and "Delivered"
+          _buildProgressStep(
+            AppStrings.get('outForDelivery'),
+    order.status.index >= OrderStatus.outForDelivery.index,
           ),
           _buildProgressStep(
-            AppStrings.orderConfirmed,
-            order.status.index >= OrderStatus.confirmed.index,
-          ),
-          _buildProgressStep(
-            AppStrings.preparing,
-            order.status.index >= OrderStatus.preparing.index,
-          ),
-          _buildProgressStep(
-            AppStrings.ready,
-            order.status.index >= OrderStatus.ready.index,
-          ),
-          _buildProgressStep(
-            AppStrings.delivered,
+    AppStrings.get('delivered'),
             order.status == OrderStatus.delivered,
             isLast: true,
           ),
         ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
   Widget _buildProgressStep(String title, bool isCompleted, {bool isFirst = false, bool isLast = false}) {
     const double iconSize = 32;
@@ -559,33 +583,32 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
   Widget _buildRestaurantInfo(Order order) {
     const String phoneNumber = '+34932112072';
 
-    Future<void> makePhoneCall(String phoneNumber) async {
-      final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
-      try {
-        if (await canLaunchUrl(phoneUri)) {
-          await launchUrl(phoneUri);
-        } else {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Unable to make a call to $phoneNumber'),
-                backgroundColor: AppColors.error,
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error making call: $e'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
+ Future<void> makePhoneCall(String phoneNumber) async {
+  final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+  try {
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppStrings.get('callError').replaceAll('{phoneNumber}', phoneNumber)),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
-
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppStrings.get('callErrorGeneric').replaceAll('{error}', e.toString())),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+}
     return Container(
       padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 22 : 20)),
       decoration: BoxDecoration(
@@ -651,7 +674,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '40 min',
+                              '40 ${AppStrings.minutes}',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: AppColors.textLight,
@@ -670,7 +693,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              order.deliveryType.name,
+                              order.deliveryType.name=='delivery'?AppStrings.get('delivery'):AppStrings.get('pickup'),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: AppColors.textLight,
@@ -683,7 +706,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Saborly, C/ de Pere IV, 208, Sant Martí, 08005 Barcelona, Spain',
+  AppStrings.get('restaurantAddress'),
                       style: TextStyle(
                         fontSize: 13,
                         color: AppColors.textLight,
@@ -703,8 +726,8 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             child: ElevatedButton.icon(
               onPressed: () => makePhoneCall(phoneNumber),
               icon: const Icon(Icons.phone_rounded, size: 20),
-              label: const Text(
-                'Call Restaurant',
+              label:  Text(
+  AppStrings.get('callRestaurant'),
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -759,7 +782,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Payment Info',
+                AppStrings.get('paymentInfo'),
                 style: TextStyle(
                   fontSize: isDesktop ? 18 : 17,
                   fontWeight: FontWeight.w700,
@@ -770,9 +793,11 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _buildInfoRow('Method:', _getPaymentMethodText(order.paymentMethod)),
+_buildInfoRow(AppStrings.get('paymentMethod'), _getPaymentMethodText(order.paymentMethod)),
+
           const SizedBox(height: 12),
-          _buildInfoRow('Status:', _getPaymentStatusText(order.paymentStatus)),
+_buildInfoRow(AppStrings.get('paymentStatus'), _getPaymentStatusText(order.paymentStatus)),
+
         ],
       ),
     );
@@ -882,7 +907,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Your delicious order items',
+  AppStrings.get('emptyOrderItems'),
                       style: TextStyle(
                         fontSize: 14,
                         color: AppColors.textMedium,
@@ -896,17 +921,20 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
           const SizedBox(height: 20),
           Divider(color: AppColors.divider, thickness: 1, height: 1),
           const SizedBox(height: 16),
-          _buildInfoRow('Subtotal:', '${AppStrings.currency}${order.subtotal.toStringAsFixed(2)}'),
+_buildInfoRow(AppStrings.get('subtotal'), '${AppStrings.get('currency')}${order.subtotal.toStringAsFixed(2)}'),
+
           if (order.deliveryFee > 0)
-            _buildInfoRow('Delivery Fee:', '${AppStrings.currency}${order.deliveryFee.toStringAsFixed(2)}'),
+  _buildInfoRow(AppStrings.get('deliveryFee'), '${AppStrings.get('currency')}${order.deliveryFee.toStringAsFixed(2)}'),
+
           if (order.tax > 0)
-            _buildInfoRow('Tax:', '${AppStrings.currency}${order.tax.toStringAsFixed(2)}'),
+  _buildInfoRow(AppStrings.get('tax'), '${AppStrings.get('currency')}${order.tax.toStringAsFixed(2)}'),
+
           const SizedBox(height: 16),
           Divider(color: AppColors.divider, thickness: 2, height: 2),
           const SizedBox(height: 16),
           _buildInfoRow(
-            'Total:', 
-            '${AppStrings.currency}${order.total.toStringAsFixed(2)}', 
+  AppStrings.get('total'),
+  '${AppStrings.get('currency')}${order.total.toStringAsFixed(2)}',
             isBold: true,
           ),
         ],
@@ -963,16 +991,30 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
-    final period = date.hour >= 12 ? 'PM' : 'AM';
-    return '${months[date.month - 1]} ${date.day}, ${date.year} at $hour:${date.minute.toString().padLeft(2, '0')} $period';
-  }
-
+String _formatDate(DateTime date) {
+  final months = [
+    AppStrings.get('jan'),
+    AppStrings.get('feb'),
+    AppStrings.get('mar'),
+    AppStrings.get('apr'),
+    AppStrings.get('may'),
+    AppStrings.get('jun'),
+    AppStrings.get('jul'),
+    AppStrings.get('aug'),
+    AppStrings.get('sep'),
+    AppStrings.get('oct'),
+    AppStrings.get('nov'),
+    AppStrings.get('dec'),
+  ];
+  final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+  final period = date.hour >= 12 ? AppStrings.get('pm') : AppStrings.get('am');
+  return '${months[date.month - 1]} ${date.day}, ${date.year} at $hour:${date.minute.toString().padLeft(2, '0')} $period';
+}
   String _getPaymentMethodText(PaymentMethod method) {
     switch (method) {
       case PaymentMethod.cashOnDelivery:
+        return AppStrings.cashOnDelivery;
+            case PaymentMethod.shop:
         return AppStrings.cashOnDelivery;
       case PaymentMethod.card:
         return 'Card';

@@ -15,15 +15,15 @@ import '../../../shared/widgets/custom_button.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
-      DateTime? _lastPressedAt;
+    DateTime? _lastPressedAt;
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) async {
         if (didPop) return;
-        
+
         final now = DateTime.now();
         final maxDuration = const Duration(seconds: 2);
         final isWarning = _lastPressedAt == null ||
@@ -31,12 +31,11 @@ class ProfileScreen extends StatelessWidget {
 
         if (isWarning) {
           _lastPressedAt = now;
-          
-          // Show toast message
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Press back again to exit',
+                AppStrings.get('pressBackAgain'),
                 style: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   color: Colors.white,
@@ -53,8 +52,7 @@ class ProfileScreen extends StatelessWidget {
           );
           return;
         }
-        
-        // Exit app
+
         SystemNavigator.pop();
       },
       child: Scaffold(
@@ -65,22 +63,21 @@ class ProfileScreen extends StatelessWidget {
             if (!authProvider.isAuthenticated) {
               return _buildLoginPrompt(context);
             }
-      
+
             return LayoutBuilder(
               builder: (context, constraints) {
                 final isWeb = constraints.maxWidth >= 768;
-                
+
                 if (isWeb) {
-                  return SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        _buildWebLayout(context, authProvider, constraints),
-                        Container(
-                          width: double.infinity,
-                          child: FoodKingFooter(),
-                        ),
-                      ],
-                    ),
+                  return CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: _buildWebLayout(context, authProvider, constraints),
+                      ),
+                      SliverToBoxAdapter(
+                        child: FoodKingFooter(), // Full-width footer
+                      ),
+                    ],
                   );
                 } else {
                   return _buildMobileLayout(context, authProvider);
@@ -93,6 +90,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  // Web layout
   Widget _buildWebLayout(BuildContext context, AuthProvider authProvider, BoxConstraints constraints) {
     return Container(
       color: Colors.grey[50],
@@ -100,11 +98,10 @@ class ProfileScreen extends StatelessWidget {
         padding: EdgeInsets.all(32.w),
         child: Center(
           child: Container(
-            constraints: BoxConstraints(maxWidth: 1400),
+            constraints: const BoxConstraints(maxWidth: 1400),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Page Header
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
                   decoration: BoxDecoration(
@@ -124,7 +121,7 @@ class ProfileScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Account Management',
+                            AppStrings.get('accountManagement'),
                             style: TextStyle(
                               fontSize: 28.sp,
                               fontWeight: FontWeight.w700,
@@ -134,7 +131,7 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           SizedBox(height: 4.h),
                           Text(
-                            'Manage your account settings and preferences',
+                            AppStrings.get('manageYourAccount'),
                             style: TextStyle(
                               fontSize: 16.sp,
                               color: AppColors.textLight,
@@ -145,14 +142,10 @@ class ProfileScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                
                 SizedBox(height: 32.h),
-                
-                // Main Content
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Left Sidebar
                     Container(
                       width: 350,
                       child: Column(
@@ -165,16 +158,13 @@ class ProfileScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    
                     SizedBox(width: 32.w),
-                    
-                    // Main Content Area
                     Expanded(
                       child: Column(
                         children: [
                           _buildAccountSettingsCard(context),
                           SizedBox(height: 24.h),
-                          _buildPreferencesCard(),
+                          _buildPreferencesCard(context),
                           SizedBox(height: 24.h),
                           _buildSecurityCard(context),
                         ],
@@ -190,9 +180,255 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildQuickLinksCard(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(24.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppStrings.get('quickActions'),
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          _buildQuickLink(AppStrings.get('orderHistory'), Icons.history, () {
+            context.push(AppRoutes.orders);
+          }),
+          _buildQuickLink(AppStrings.get('faq'), Icons.help_outline, () {
+            context.go(AppRoutes.faq); // Link to FAQ
+          }),
+          _buildQuickLink(AppStrings.get('privacy'), Icons.privacy_tip_outlined, () {
+            context.go(AppRoutes.privacy); // Link to Privacy
+          }),
+          _buildQuickLink(AppStrings.get('downloadData'), Icons.download, () {}),
+          Divider(height: 24.h, color: Colors.grey[200]),
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              return _buildQuickLink(
+                AppStrings.get('signOut'),
+                Icons.logout,
+                () => _showSignOutDialog(context, authProvider),
+                isDestructive: true,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreferencesCard(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(24.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppStrings.get('preferences'),
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textDark,
+            ),
+          ),
+          SizedBox(height: 20.h),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            mainAxisSpacing: 16.h,
+            crossAxisSpacing: 16.w,
+            childAspectRatio: 3.5,
+            children: [
+              _buildSettingCard(AppStrings.get('notifications'), Icons.notifications_outlined, () {}),
+              _buildSettingCard(AppStrings.get('privacy'), Icons.privacy_tip_outlined, () {
+                context.go(AppRoutes.privacy); // Already linked to Privacy
+              }),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecurityCard(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(24.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppStrings.get('securityAndSupport'),
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textDark,
+            ),
+          ),
+          SizedBox(height: 20.h),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            mainAxisSpacing: 16.h,
+            crossAxisSpacing: 16.w,
+            childAspectRatio: 3.5,
+            children: [
+              _buildSettingCard(AppStrings.get('changePassword'), Icons.lock_outline, () {
+                context.push('/change-password');
+              }),
+              _buildSettingCard(AppStrings.get('faq'), Icons.help_outline, () {
+                context.go(AppRoutes.faq); // Link to FAQ
+              }),
+              _buildSettingCard(AppStrings.get('about'), Icons.info_outline, () {
+                context.go(AppRoutes.about);
+              }),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuOptions(BuildContext context) {
+    final menuItems = [
+      ProfileMenuItem(
+        icon: Icons.receipt_long,
+        title: AppStrings.get('orderHistory'),
+        subtitle: AppStrings.get('viewPastOrders'),
+        onTap: () {
+          context.go(AppRoutes.orders);
+        },
+      ),
+      ProfileMenuItem(
+        icon: Icons.lock,
+        title: AppStrings.get('changePassword'),
+        subtitle: AppStrings.get('updatePassword'),
+        onTap: () {
+          context.go('/change-password');
+        },
+      ),
+      ProfileMenuItem(
+        icon: Icons.help_outline,
+        title: AppStrings.get('faq'),
+        subtitle: AppStrings.get('frequentlyAskedQuestions'),
+        onTap: () {
+          context.go(AppRoutes.contact); // Link to FAQ
+        },
+      ),
+      ProfileMenuItem(
+        icon: Icons.privacy_tip_outlined,
+        title: AppStrings.get('privacy'),
+        subtitle: AppStrings.get('privacyPolicy'),
+        onTap: () {
+          context.go(AppRoutes.privacy); // Link to Privacy
+        },
+      ),
+      ProfileMenuItem(
+        icon: Icons.info,
+        title: AppStrings.get('about'),
+        subtitle: AppStrings.get('learnAboutUs'),
+        onTap: () {
+          _showAboutDialog(context);
+        },
+      ),
+      ProfileMenuItem(
+        icon: Icons.notifications,
+        title: AppStrings.get('notifications'),
+        subtitle: AppStrings.get('notificationPreferences'),
+        onTap: () {},
+      ),
+    ];
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: menuItems.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          final isLast = index == menuItems.length - 1;
+
+          return Column(
+            children: [
+              _buildMenuItem(item),
+              if (!isLast)
+                Divider(
+                  height: 1,
+                  color: AppColors.divider,
+                  indent: 56.w,
+                ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // Other methods remain unchanged (omitted for brevity)
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      title: Text(
+        AppStrings.profile,
+        style: TextStyle(
+          fontSize: 20.sp,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textDark,
+        ),
+      ),
+    );
+  }
+
   Widget _buildProfileCard(BuildContext context, AuthProvider authProvider) {
     final user = authProvider.user!;
-    
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
@@ -208,7 +444,6 @@ class ProfileScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Avatar with status indicator
           Stack(
             children: [
               Container(
@@ -248,9 +483,7 @@ class ProfileScreen extends StatelessWidget {
               ),
             ],
           ),
-          
           SizedBox(height: 16.h),
-          
           Text(
             user.fullName,
             style: TextStyle(
@@ -260,9 +493,7 @@ class ProfileScreen extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          
           SizedBox(height: 4.h),
-          
           Text(
             user.email,
             style: TextStyle(
@@ -271,9 +502,7 @@ class ProfileScreen extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          
           SizedBox(height: 2.h),
-          
           Text(
             user.phone,
             style: TextStyle(
@@ -282,9 +511,7 @@ class ProfileScreen extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          
           SizedBox(height: 20.h),
-          
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -299,7 +526,7 @@ class ProfileScreen extends StatelessWidget {
                 elevation: 0,
               ),
               child: Text(
-                'Edit Profile',
+                AppStrings.get('editProfile'),
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
@@ -330,7 +557,7 @@ class ProfileScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Activity Overview',
+            AppStrings.get('activityOverview'),
             style: TextStyle(
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
@@ -341,10 +568,10 @@ class ProfileScreen extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _buildStatItem('Orders', '12', Icons.receipt_long),
+                child: _buildStatItem(AppStrings.get('orders'), '12', Icons.receipt_long),
               ),
               Expanded(
-                child: _buildStatItem('Reviews', '8', Icons.star),
+                child: _buildStatItem(AppStrings.get('reviews'), '8', Icons.star),
               ),
             ],
           ),
@@ -352,10 +579,10 @@ class ProfileScreen extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _buildStatItem('Favorites', '24', Icons.favorite),
+                child: _buildStatItem(AppStrings.get('favorites'), '24', Icons.favorite),
               ),
               Expanded(
-                child: _buildStatItem('Points', '150', Icons.loyalty),
+                child: _buildStatItem(AppStrings.get('points'), '150', Icons.loyalty),
               ),
             ],
           ),
@@ -397,53 +624,6 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildQuickLinksCard(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(24.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
-          ),
-          SizedBox(height: 16.h),
-          _buildQuickLink('Order History', Icons.history, () {
-            context.push('/orders');
-          }),
-          _buildQuickLink('Download Data', Icons.download, () {}),
-          _buildQuickLink('Help Center', Icons.help_outline, () {}),
-          Divider(height: 24.h, color: Colors.grey[200]),
-          Consumer<AuthProvider>(
-            builder: (context, authProvider, child) {
-              return _buildQuickLink(
-                'Sign Out',
-                Icons.logout,
-                () => _showSignOutDialog(context, authProvider),
-                isDestructive: true,
-              );
-            },
-          ),
-        ],
-      ),
     );
   }
 
@@ -502,7 +682,7 @@ class ProfileScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Account Settings',
+            AppStrings.get('accountSettings'),
             style: TextStyle(
               fontSize: 20.sp,
               fontWeight: FontWeight.w700,
@@ -512,107 +692,18 @@ class ProfileScreen extends StatelessWidget {
           SizedBox(height: 20.h),
           GridView.count(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
             mainAxisSpacing: 16.h,
             crossAxisSpacing: 16.w,
             childAspectRatio: 3.5,
             children: [
-              _buildSettingCard('Personal Information', Icons.person_outline, () {
+              _buildSettingCard(AppStrings.get('personalInformation'), Icons.person_outline, () {
                 _showEditProfileDialog(context);
               }),
-              _buildSettingCard('Order History', Icons.receipt_long_outlined, () {
+              _buildSettingCard(AppStrings.get('orderHistory'), Icons.receipt_long_outlined, () {
                 context.push('/orders');
               }),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPreferencesCard() {
-    return Container(
-      padding: EdgeInsets.all(24.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Preferences',
-            style: TextStyle(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
-            ),
-          ),
-          SizedBox(height: 20.h),
-          GridView.count(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 16.h,
-            crossAxisSpacing: 16.w,
-            childAspectRatio: 3.5,
-            children: [
-              _buildSettingCard('Notifications', Icons.notifications_outlined, () {}),
-              _buildSettingCard('Privacy', Icons.privacy_tip_outlined, () {}),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSecurityCard(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(24.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Security & Support',
-            style: TextStyle(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
-            ),
-          ),
-          SizedBox(height: 20.h),
-          GridView.count(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 16.h,
-            crossAxisSpacing: 16.w,
-            childAspectRatio: 3.5,
-            children: [
-              _buildSettingCard('Change Password', Icons.lock_outline, () {
-                context.push('/change-password');
-              }),
-              _buildSettingCard('Help & Support', Icons.help_outline, () {}),
-              _buildSettingCard('About', Icons.info_outline, () {}),
             ],
           ),
         ],
@@ -688,21 +779,6 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      title: Text(
-        AppStrings.profile,
-        style: TextStyle(
-          fontSize: 20.sp,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textDark,
-        ),
-      ),
-    );
-  }
-
   Widget _buildLoginPrompt(BuildContext context) {
     return Center(
       child: Column(
@@ -724,7 +800,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Sign in to access your profile and orders',
+            AppStrings.get('signInPrompt'),
             style: TextStyle(
               fontSize: 14.sp,
               color: AppColors.textLight,
@@ -751,7 +827,6 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildProfileHeader(BuildContext context, AuthProvider authProvider) {
     final user = authProvider.user!;
-    
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       padding: EdgeInsets.all(20.w),
@@ -786,9 +861,7 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
           ),
-          
           SizedBox(width: 16.w),
-          
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -819,7 +892,6 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
-          
           IconButton(
             onPressed: () {
               _showEditProfileDialog(context);
@@ -830,79 +902,6 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMenuOptions(BuildContext context) {
-    final menuItems = [
-      ProfileMenuItem(
-        icon: Icons.receipt_long,
-        title: 'Order History',
-        subtitle: 'View your past orders',
-        onTap: () {
-          context.push('/orders');
-        },
-      ),
-      ProfileMenuItem(
-        icon: Icons.lock,
-        title: 'Change Password',
-        subtitle: 'Update your password',
-        onTap: () {
-          context.push('/change-password');
-        },
-      ),
-      ProfileMenuItem(
-        icon: Icons.notifications,
-        title: 'Notifications',
-        subtitle: 'Notification preferences',
-        onTap: () {},
-      ),
-      ProfileMenuItem(
-        icon: Icons.help,
-        title: 'Help & Support',
-        subtitle: 'Get help and contact us',
-        onTap: () {},
-      ),
-      ProfileMenuItem(
-        icon: Icons.info,
-        title: 'About',
-        subtitle: 'App version and info',
-        onTap: () {},
-      ),
-    ];
-
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: menuItems.asMap().entries.map((entry) {
-          final index = entry.key;
-          final item = entry.value;
-          final isLast = index == menuItems.length - 1;
-          
-          return Column(
-            children: [
-              _buildMenuItem(item),
-              if (!isLast)
-                Divider(
-                  height: 1,
-                  color: AppColors.divider,
-                  indent: 56.w,
-                ),
-            ],
-          );
-        }).toList(),
       ),
     );
   }
@@ -974,7 +973,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Version 1.0.0',
+            AppStrings.get('appVersion'),
             style: TextStyle(
               fontSize: 14.sp,
               color: AppColors.textLight,
@@ -996,6 +995,83 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.info, color: AppColors.primary, size: 24.sp),
+              SizedBox(width: 8.w),
+              Text(
+                AppStrings.get('aboutApp').replaceAll('{appName}', AppStrings.get('appName')),
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textDark,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                AppStrings.get('appVersion'),
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.textLight,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                AppStrings.get('appDescription').replaceAll('{appName}', AppStrings.get('appName')),
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.textMedium,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                AppStrings.get('copyright').replaceAll('{appName}', AppStrings.get('appName')),
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: AppColors.textLight,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                AppStrings.get('companyAddress'),
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: AppColors.textLight,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                AppStrings.get('close'),
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showEditProfileDialog(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final user = authProvider.user!;
@@ -1011,7 +1087,7 @@ class ProfileScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16.r),
           ),
           title: Text(
-            'Edit Profile',
+            AppStrings.get('editProfile'),
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
@@ -1055,7 +1131,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 AppStrings.cancel,
                 style: TextStyle(
@@ -1081,7 +1157,7 @@ class ProfileScreen extends StatelessWidget {
                               Navigator.of(context).pop();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: const Text(AppStrings.profileUpdatedSuccessfully),
+                                  content: Text(AppStrings.profileUpdatedSuccessfully),
                                   backgroundColor: AppColors.success,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
@@ -1095,7 +1171,7 @@ class ProfileScreen extends StatelessWidget {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: const Text(AppStrings.failedToUpdateProfile),
+                                  content: Text(AppStrings.failedToUpdateProfile),
                                   backgroundColor: AppColors.error,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
@@ -1123,7 +1199,7 @@ class ProfileScreen extends StatelessWidget {
                           ),
                         )
                       : Text(
-                          'Save',
+                          AppStrings.get('save'),
                           style: TextStyle(
                             fontSize: 14.sp,
                             color: Colors.white,
@@ -1155,7 +1231,7 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           content: Text(
-            'Are you sure you want to sign out?',
+            AppStrings.get('areYouSureSignOut'),
             style: TextStyle(
               fontSize: 14.sp,
               color: AppColors.textMedium,
@@ -1172,34 +1248,34 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-         ElevatedButton(
-  onPressed: () async {
-    await authProvider.signOut();
-    if (context.mounted) {
-      Navigator.of(context).pop();
-      context.go(AppRoutes.home);
-    }
-  },
-  style: ElevatedButton.styleFrom(
-    backgroundColor: AppColors.error,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(8.r),
-    ),
-    padding: EdgeInsets.symmetric(
-      vertical: 12.h,  // height padding
-      horizontal: 24.w, // width padding
-    ),
-  ),
-  child: Text(
-    AppStrings.signOut,
-    style: TextStyle(
-      fontSize: 14.sp,
-      color: Colors.white,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-),
-],
+            ElevatedButton(
+              onPressed: () async {
+                await authProvider.signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  context.go(AppRoutes.home);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                padding: EdgeInsets.symmetric(
+                  vertical: 12.h,
+                  horizontal: 24.w,
+                ),
+              ),
+              child: Text(
+                AppStrings.signOut,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -1208,7 +1284,6 @@ class ProfileScreen extends StatelessWidget {
 
 class ProfileMenuItem {
   final IconData icon;
-  
   final String title;
   final String subtitle;
   final VoidCallback onTap;

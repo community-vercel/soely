@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:soely/core/constant/app_colors.dart';
+import 'package:soely/core/constant/app_strings.dart';
 import 'package:soely/features/providers/auth_proveder.dart';
 
 import '../../../shared/widgets/custom_button.dart';
@@ -70,7 +71,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   Consumer<AuthProvider>(
                     builder: (context, provider, child) {
                       return CustomButton(
-                        text: 'Change Password',
+                        text:   AppStrings.get('changePassword'),
                         isLoading: provider.isLoading,
                         onPressed: () => _handleChangePassword(provider),
                       );
@@ -90,15 +91,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       backgroundColor: Colors.white,
       elevation: 0,
       leading: IconButton(
-        onPressed: () => context.pop(),
-        icon: Icon(
-          Icons.arrow_back_ios,
-          color: AppColors.textDark,
-          size: 20.sp,
-        ),
+        icon: Icon(Icons.arrow_back, color: AppColors.textDark, size: 24.sp),
+        onPressed: () => context.canPop() ? context.pop() : context.go('/profile'),
       ),
       title: Text(
-        'Change Password',
+          AppStrings.get('changePassword'),
+
         style: TextStyle(
           fontSize: 18.sp,
           fontWeight: FontWeight.w600,
@@ -114,7 +112,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Change Password',
+  AppStrings.get('changePassword'),
           style: TextStyle(
             fontSize: 28.sp,
             fontWeight: FontWeight.w700,
@@ -124,7 +122,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         ),
         SizedBox(height: 8.h),
         Text(
-          'Keep your account secure with a strong password',
+  AppStrings.get('secureAccount'),
           style: TextStyle(
             fontSize: 15.sp,
             color: AppColors.textLight,
@@ -153,7 +151,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Current Password',
+  AppStrings.get('currentPassword'),
             style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
@@ -165,7 +163,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             controller: _currentPasswordController,
             obscureText: _obscureCurrentPassword,
             decoration: InputDecoration(
-              hintText: 'Enter current password',
+  hintText: AppStrings.get('enterCurrentPassword'),
               hintStyle: TextStyle(
                 color: AppColors.textLight?.withOpacity(0.5),
                 fontSize: 14.sp,
@@ -219,7 +217,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter your current password';
+    return AppStrings.get('pleaseEnterCurrentPassword');
               }
               return null;
             },
@@ -228,7 +226,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           SizedBox(height: 24.h),
 
           Text(
-            'New Password',
+  AppStrings.get('newPassword'),
             style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
@@ -240,7 +238,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             controller: _newPasswordController,
             obscureText: _obscureNewPassword,
             decoration: InputDecoration(
-              hintText: 'Enter new password',
+  hintText: AppStrings.get('enterNewPassword'),
               hintStyle: TextStyle(
                 color: AppColors.textLight?.withOpacity(0.5),
                 fontSize: 14.sp,
@@ -294,13 +292,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter a new password';
+    return AppStrings.get('pleaseEnterNewPassword');
               }
               if (value.length < 6) {
-                return 'Password must be at least 6 characters';
+    return AppStrings.get('passwordMinLength6');
               }
               if (value == _currentPasswordController.text) {
-                return 'New password must be different from current password';
+    return AppStrings.get('newPasswordDifferent');
               }
               return null;
             },
@@ -309,7 +307,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           SizedBox(height: 24.h),
 
           Text(
-            'Confirm New Password',
+  AppStrings.get('confirmPassword'),
             style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
@@ -321,7 +319,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             controller: _confirmPasswordController,
             obscureText: _obscureConfirmPassword,
             decoration: InputDecoration(
-              hintText: 'Re-enter new password',
+  hintText: AppStrings.get('reEnterNewPassword'),
               hintStyle: TextStyle(
                 color: AppColors.textLight?.withOpacity(0.5),
                 fontSize: 14.sp,
@@ -375,10 +373,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please confirm your new password';
+    return AppStrings.get('pleaseConfirmNewPassword');
               }
               if (value != _newPasswordController.text) {
-                return 'Passwords do not match';
+    return AppStrings.get('passwordsDontMatch');
               }
               return null;
             },
@@ -410,7 +408,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               SizedBox(width: 12.w),
               Text(
-                'Password Requirements',
+  AppStrings.get('passwordRequirements'),
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
@@ -420,13 +418,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             ],
           ),
           SizedBox(height: 12.h),
-          _buildTipItem('At least 6 characters long'),
-          SizedBox(height: 8.h),
-          _buildTipItem('Include uppercase and lowercase letters'),
-          SizedBox(height: 8.h),
-          _buildTipItem('Add numbers and special characters'),
-          SizedBox(height: 8.h),
-          _buildTipItem('Avoid common words or patterns'),
+          _buildTipItem(AppStrings.get('passwordMinLength6Tip')),
+SizedBox(height: 8.h),
+_buildTipItem(AppStrings.get('passwordUpperLower')),
+SizedBox(height: 8.h),
+_buildTipItem(AppStrings.get('passwordNumbersSpecial')),
+SizedBox(height: 8.h),
+_buildTipItem(AppStrings.get('avoidCommonWords')),
         ],
       ),
     );
@@ -471,29 +469,29 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
     if (!mounted) return;
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Password changed successfully'),
-          backgroundColor: AppColors.success ?? Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-        ),
-      );
-      context.pop();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.error ?? 'Failed to change password'),
-          backgroundColor: AppColors.error ?? Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-        ),
-      );
-    }
+ if (success) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(AppStrings.get('passwordChangedSuccess')),
+      backgroundColor: AppColors.success ?? Colors.green,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+    ),
+  );
+  context.pop();
+} else {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(provider.error ?? AppStrings.get('passwordChangeFailed')),
+      backgroundColor: AppColors.error ?? Colors.red,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+    ),
+  );
+}
   }
 }

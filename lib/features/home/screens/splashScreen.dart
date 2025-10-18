@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:soely/core/constant/app_colors.dart';
 import 'package:soely/core/constant/app_strings.dart';
-import 'package:soely/features/providers/auth_proveder.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -300,7 +298,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   Widget _buildTagline() {
     return Text(
-      'Delicious food, delivered fast',
+    AppStrings.get('tagline'),
       style: GoogleFonts.poppins(
         fontSize: 16.sp,
         fontWeight: FontWeight.w400,
@@ -325,7 +323,7 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         SizedBox(height: 16.h),
         Text(
-          'Loading...',
+        AppStrings.get('loading'),
           style: GoogleFonts.poppins(
             fontSize: 14.sp,
             fontWeight: FontWeight.w500,

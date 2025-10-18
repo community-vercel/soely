@@ -5,12 +5,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:soely/core/constant/app_colors.dart';
+import 'package:soely/core/constant/app_strings.dart';
 import 'package:soely/core/routes/app_routes.dart';
+import 'package:soely/core/services/language_service.dart';
 import 'package:soely/core/utils/responsive_utils.dart';
 import 'package:soely/features/providers/offer_provider.dart';
 import 'package:soely/shared/models/food_item.dart';
 import 'package:soely/shared/models/offer.dart';
-import 'package:soely/shared/widgets/food_item_card.dart';
+import 'package:soely/shared/widgets/food_item_card4.dart';
 import 'package:soely/shared/widgets/ooter.dart';
 
 class OffersScreen extends StatefulWidget {
@@ -24,6 +26,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
   DateTime? _lastPressedAt;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  bool _isLoadingForLanguageChange = false; // ✅ Track language change loading
 
   @override
   void initState() {
@@ -39,12 +42,74 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
     _animationController.forward();
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<OffersProvider>().loadItemsWithOffers();
+      _loadOffersWithCurrentLanguage();
     });
+
+    _setupLanguageListener();
+  }
+
+  /// ✅ Load offers with current language
+  void _loadOffersWithCurrentLanguage() {
+    if (mounted) {
+      final languageService = context.read<LanguageService>();
+      final offersProvider = context.read<OffersProvider>();
+      final currentLanguage = languageService.currentLanguage;
+      
+      
+      offersProvider.setLanguage(currentLanguage).then((_) {
+        offersProvider.loadOffers();
+      });
+    }
+  }
+
+  void _setupLanguageListener() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<LanguageService>().addListener(_onLanguageChanged);
+      }
+    });
+  }
+
+  /// ✅ Reload data when language changes - show loading
+  void _onLanguageChanged() {
+    if (mounted) {
+      
+      // Show loading indicator
+      setState(() {
+        _isLoadingForLanguageChange = true;
+      });
+
+      final languageService = context.read<LanguageService>();
+      final offersProvider = context.read<OffersProvider>();
+      final currentLanguage = languageService.currentLanguage;
+      
+      // Reload with new language
+      offersProvider.setLanguage(currentLanguage).then((_) {
+        return offersProvider.loadOffers();
+      }).then((_) {
+        // Hide loading when done
+        if (mounted) {
+          setState(() {
+            _isLoadingForLanguageChange = false;
+          });
+        }
+      }).catchError((e) {
+        if (mounted) {
+          setState(() {
+            _isLoadingForLanguageChange = false;
+          });
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    try {
+      context.read<LanguageService>().removeListener(_onLanguageChanged);
+    } catch (e) {
+    }
+    
     _animationController.dispose();
     super.dispose();
   }
@@ -102,116 +167,172 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) async {
-        if (didPop) return;
+    return Consumer<LanguageService>(
+      builder: (context, languageService, _) {
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) async {
+            if (didPop) return;
 
-        final now = DateTime.now();
-        final maxDuration = const Duration(seconds: 2);
-        final isWarning = _lastPressedAt == null ||
-            now.difference(_lastPressedAt!) > maxDuration;
+            final now = DateTime.now();
+            final maxDuration = const Duration(seconds: 2);
+            final isWarning = _lastPressedAt == null ||
+                now.difference(_lastPressedAt!) > maxDuration;
 
-        if (isWarning) {
-          _lastPressedAt = now;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Press back again to exit',
-                style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.white),
-              ),
-              duration: const Duration(seconds: 2),
-              backgroundColor: AppColors.textDark,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-              margin: EdgeInsets.all(16.r),
-            ),
-          );
-          return;
-        }
-        SystemNavigator.pop();
-      },
-      child: Scaffold(
-        backgroundColor: Colors.grey[50],
-        body: Consumer<OffersProvider>(
-          builder: (context, provider, child) {
-            if (provider.isLoading && provider.itemsWithOffers.isEmpty) {
-              return _buildLoadingState();
+            if (isWarning) {
+              _lastPressedAt = now;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    AppStrings.get('pressBackAgain'),
+                    style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.white),
+                  ),
+                  duration: const Duration(seconds: 2),
+                  backgroundColor: AppColors.textDark,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                  margin: EdgeInsets.all(16.r),
+                ),
+              );
+              return;
             }
+            SystemNavigator.pop();
+          },
+          child: Scaffold(
+            backgroundColor: Colors.grey[50],
+            body: Stack(
+              children: [
+                Consumer<OffersProvider>(
+                  builder: (context, provider, child) {
+                    // ✅ Show loading if initial load or language change loading
+                    if ((provider.isLoading && provider.itemsWithOffers.isEmpty) ||
+                        _isLoadingForLanguageChange) {
+                      return _buildLoadingState();
+                    }
 
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final screenWidth = constraints.maxWidth;
-                final isWeb = ResponsiveUtils.isWeb(context);
-                final maxContentWidth = _getMaxContentWidth(screenWidth);
-                final horizontalPadding = _getHorizontalPadding(screenWidth);
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        final screenWidth = constraints.maxWidth;
+                        final isWeb = ResponsiveUtils.isWeb(context);
+                        final maxContentWidth = _getMaxContentWidth(screenWidth);
+                        final horizontalPadding = _getHorizontalPadding(screenWidth);
 
-                return RefreshIndicator(
-                  onRefresh: provider.loadItemsWithOffers,
-                  color: AppColors.primary,
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      if (!isWeb) _buildSliverAppBar(screenWidth),
-                      SliverToBoxAdapter(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.white,
-                                Colors.grey[50]!,
-                              ],
-                            ),
-                          ),
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(maxWidth: maxContentWidth),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SizedBox(height: _isMobile(screenWidth) ? 20.h : 40.h),
-                                    _buildHeader(screenWidth, provider),
-                                    SizedBox(height: _isMobile(screenWidth) ? 24.h : 40.h),
-                                  ],
+                        return RefreshIndicator(
+                          onRefresh: () async {
+                            final currentLanguage = languageService.currentLanguage;
+                            await provider.setLanguage(currentLanguage);
+                            await provider.loadOffers();
+                          },
+                          color: AppColors.primary,
+                          child: CustomScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            slivers: [
+                              if (!isWeb) _buildSliverAppBar(screenWidth),
+                              SliverToBoxAdapter(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.white,
+                                        Colors.grey[50]!,
+                                      ],
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(maxWidth: maxContentWidth),
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            SizedBox(height: _isMobile(screenWidth) ? 20.h : 40.h),
+                                            _buildHeader(screenWidth, provider),
+                                            SizedBox(height: _isMobile(screenWidth) ? 24.h : 40.h),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SliverToBoxAdapter(
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: maxContentWidth),
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                              child: FadeTransition(
-                                opacity: _fadeAnimation,
-                                child: _buildContent(provider, screenWidth),
+                              SliverToBoxAdapter(
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(maxWidth: maxContentWidth),
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                                      child: FadeTransition(
+                                        opacity: _fadeAnimation,
+                                        child: _buildContent(provider, screenWidth),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                              if (isWeb)
+                                SliverToBoxAdapter(
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: FoodKingFooter(),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+                
+                // ✅ Show overlay loading during language change
+                if (_isLoadingForLanguageChange)
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withOpacity(0.3),
+                      child: Center(
+                        child: Container(
+                          padding: EdgeInsets.all(24.r),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                strokeWidth: 3,
+                              ),
+                              SizedBox(height: 16.h),
+                              Text(
+                                'Changing language...',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      if (isWeb)
-                        SliverToBoxAdapter(
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: FoodKingFooter(),
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
-                );
-              },
-            );
-          },
-        ),
-      ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -226,7 +347,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
           ),
           SizedBox(height: 16.h),
           Text(
-            'Loading amazing offers...',
+            AppStrings.get('loadingOffers'),
             style: GoogleFonts.poppins(
               fontSize: 14.sp,
               color: AppColors.textLight,
@@ -266,7 +387,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
         ),
       ),
       title: Text(
-        'Special Offers',
+        AppStrings.get('specialOffers'),
         style: GoogleFonts.poppins(
           fontSize: _isMobile(screenWidth) ? 18.sp : 22.sp,
           fontWeight: FontWeight.w600,
@@ -339,7 +460,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                           ),
                           SizedBox(width: 4.w),
                           Text(
-                            'HOT DEALS',
+                            AppStrings.get('hotDeals'),
                             style: GoogleFonts.poppins(
                               fontSize: 11.sp,
                               fontWeight: FontWeight.w600,
@@ -354,7 +475,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                 ),
                 SizedBox(height: 12.h),
                 Text(
-                  'Exclusive Offers',
+                  AppStrings.get('exclusiveOffers'),
                   style: GoogleFonts.poppins(
                     fontSize: isMobile ? 24.sp : (isTablet ? 32.sp : 40.sp),
                     fontWeight: FontWeight.w700,
@@ -364,7 +485,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  'Save up to 50% on your favorite meals',
+                  AppStrings.get('saveUpTo'),
                   style: GoogleFonts.poppins(
                     fontSize: isMobile ? 14.sp : (isTablet ? 16.sp : 18.sp),
                     color: AppColors.textLight,
@@ -399,7 +520,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                         ),
                         SizedBox(width: 8.w),
                         Text(
-                          '${provider.itemsWithOffers.length} items on offer',
+                          '${provider.itemsWithOffers.length} ${AppStrings.get('itemsOnOffer')}',
                           style: GoogleFonts.poppins(
                             fontSize: 13.sp,
                             fontWeight: FontWeight.w500,
@@ -530,7 +651,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
             ),
             SizedBox(height: isMobile ? 24.h : 32.h),
             Text(
-              'No Offers Available',
+              AppStrings.get('noOffersAvailable'),
               style: GoogleFonts.poppins(
                 fontSize: isMobile ? 20.sp : 24.sp,
                 fontWeight: FontWeight.w700,
@@ -539,7 +660,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
             ),
             SizedBox(height: 12.h),
             Text(
-              'Check back later for exciting deals!\nNew offers are added regularly.',
+              AppStrings.get('checkBackLaterOffers'),
               style: GoogleFonts.poppins(
                 fontSize: isMobile ? 14.sp : 16.sp,
                 color: AppColors.textLight,
@@ -554,7 +675,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
               },
               icon: Icon(Icons.home_rounded, size: 20.sp),
               label: Text(
-                'Browse Menu',
+                AppStrings.get('browseMenu'),
                 style: GoogleFonts.poppins(
                   fontSize: 15.sp,
                   fontWeight: FontWeight.w600,

@@ -103,7 +103,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   ),
                   SizedBox(height: 40.h),
                   Text(
-                    _passwordReset ? 'All Set!' : 'Create New Password',
+  _passwordReset ? AppStrings.get('allSet') : AppStrings.get('createNewPassword'),
                     style: TextStyle(
                       fontSize: 48.sp,
                       fontWeight: FontWeight.w800,
@@ -114,8 +114,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   SizedBox(height: 20.h),
                   Text(
                     _passwordReset 
-                      ? 'Your password has been successfully updated. You can now sign in with your new password.'
-                      : 'Your new password must be different from the previous one and meet our security requirements.',
+                      ? AppStrings.get('passwordUpdatedDescription')
+    : AppStrings.get('newPasswordRequirements'),
                     style: TextStyle(
                       fontSize: 18.sp,
                       color: AppColors.textLight,
@@ -198,12 +198,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   Widget _buildPasswordRequirements() {
-    final requirements = [
-      'At least 8 characters long',
-      'Contains uppercase and lowercase letters',
-      'Includes at least one number',
-      'Has at least one special character',
-    ];
+   final requirements = [
+    AppStrings.get('passwordMinLength8'),
+    AppStrings.get('passwordUpperLower'),
+    AppStrings.get('passwordNumber'),
+    AppStrings.get('passwordSpecialChar'),
+  ];
 
     return Column(
       children: requirements.map((requirement) => Padding(
@@ -260,7 +260,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ),
         SizedBox(height: 24.h),
         Text(
-          _passwordReset ? 'Password Updated!' : 'Reset Password',
+  _passwordReset ? AppStrings.get('passwordUpdated') : AppStrings.get('resetPassword'),
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: _isLargeScreen ? 32.sp : 28.sp,
@@ -271,9 +271,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ),
         SizedBox(height: 12.h),
         Text(
-          _passwordReset 
-            ? 'Your password has been successfully changed'
-            : 'Create a strong new password for your account',
+         _passwordReset 
+    ? AppStrings.get('passwordChanged')
+    : AppStrings.get('createStrongPassword'),
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16.sp,
@@ -306,7 +306,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ),
         SizedBox(height: 24.h),
         Text(
-          _passwordReset ? 'Password Updated!' : 'Reset Password',
+  _passwordReset ? AppStrings.get('passwordUpdated') : AppStrings.get('resetPassword'),
           style: TextStyle(
             fontSize: 28.sp,
             fontWeight: FontWeight.w700,
@@ -316,9 +316,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ),
         SizedBox(height: 8.h),
         Text(
-          _passwordReset 
-            ? 'Your password has been successfully changed.'
-            : 'Create a strong new password for your account.',
+           _passwordReset 
+    ? AppStrings.get('passwordChanged')
+    : AppStrings.get('createStrongPassword'),
           style: TextStyle(
             fontSize: 16.sp,
             color: AppColors.textLight,
@@ -341,7 +341,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           Consumer<AuthProvider>(
             builder: (context, authProvider, child) {
               return CustomButton(
-                text: 'Update Password',
+  text: AppStrings.get('updatePassword'),
                 isLoading: authProvider.isLoading,
                 onPressed: () => _handleResetPassword(context, authProvider),
               );
@@ -357,65 +357,65 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       return Row(
         children: [
           Expanded(
-            child: CustomTextField(
-              controller: _passwordController,
-              labelText: 'New Password',
-              obscureText: _obscurePassword,
-              prefixIcon: Icons.lock_outline,
-              suffixIcon: IconButton(
-                onPressed: () {
-                  setState(() {
-                    _obscurePassword = !_obscurePassword;
-                  });
-                },
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: AppColors.textLight,
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return AppStrings.pleaseEnterPassword;
-                }
-                if (value.length < 8) {
-                  return 'Password must be at least 8 characters';
-                }
-                if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]').hasMatch(value)) {
-                  return 'Password must meet security requirements';
-                }
-                return null;
-              },
-            ),
-          ),
+            child:
+         CustomTextField(
+  controller: _passwordController,
+  labelText: AppStrings.get('newPassword'),
+  obscureText: _obscurePassword,
+  prefixIcon: Icons.lock_outline,
+  suffixIcon: IconButton(
+    onPressed: () {
+      setState(() {
+        _obscurePassword = !_obscurePassword;
+      });
+    },
+    icon: Icon(
+      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+      color: AppColors.textLight,
+    ),
+  ),
+  validator: (value) {
+    if (value == null || value.isEmpty) {
+      return AppStrings.get('pleaseEnterPassword');
+    }
+    if (value.length < 8) {
+      return AppStrings.get('passwordMinLength8Error');
+    }
+    if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]').hasMatch(value)) {
+      return AppStrings.get('passwordSecurityError');
+    }
+    return null;
+  },
+), ),
           SizedBox(width: 16.w),
           Expanded(
-            child: CustomTextField(
-              controller: _confirmPasswordController,
-              labelText: 'Confirm Password',
-              obscureText: _obscureConfirmPassword,
-              prefixIcon: Icons.lock_outline,
-              suffixIcon: IconButton(
-                onPressed: () {
-                  setState(() {
-                    _obscureConfirmPassword = !_obscureConfirmPassword;
-                  });
-                },
-                icon: Icon(
-                  _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                  color: AppColors.textLight,
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return AppStrings.pleaseEnterPassword;
-                }
-                if (value != _passwordController.text) {
-                  return AppStrings.passwordsDontMatch;
-                }
-                return null;
-              },
-            ),
-          ),
+            child:
+        CustomTextField(
+  controller: _confirmPasswordController,
+  labelText: AppStrings.get('confirmPassword'),
+  obscureText: _obscureConfirmPassword,
+  prefixIcon: Icons.lock_outline,
+  suffixIcon: IconButton(
+    onPressed: () {
+      setState(() {
+        _obscureConfirmPassword = !_obscureConfirmPassword;
+      });
+    },
+    icon: Icon(
+      _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+      color: AppColors.textLight,
+    ),
+  ),
+  validator: (value) {
+    if (value == null || value.isEmpty) {
+      return AppStrings.get('pleaseEnterPassword');
+    }
+    if (value != _passwordController.text) {
+      return AppStrings.get('passwordsDontMatch');
+    }
+    return null;
+  },
+), ),
         ],
       );
     } else {
@@ -423,7 +423,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         children: [
           CustomTextField(
             controller: _passwordController,
-            labelText: 'New Password',
+            labelText: AppStrings.newPassword,
             obscureText: _obscurePassword,
             prefixIcon: Icons.lock_outline,
             suffixIcon: IconButton(
@@ -453,7 +453,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           SizedBox(height: 20.h),
           CustomTextField(
             controller: _confirmPasswordController,
-            labelText: 'Confirm Password',
+            labelText: AppStrings.confirmPassword,
             obscureText: _obscureConfirmPassword,
             prefixIcon: Icons.lock_outline,
             suffixIcon: IconButton(
@@ -501,7 +501,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               ),
               SizedBox(height: 16.h),
               Text(
-                'Password Reset Successful!',
+  AppStrings.get('passwordResetSuccess'),
                 style: TextStyle(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.w600,
@@ -510,7 +510,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               ),
               SizedBox(height: 8.h),
               Text(
-                'Your password has been updated successfully. You can now sign in with your new password.',
+  AppStrings.get('passwordResetSuccessDescription'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14.sp,
@@ -540,7 +540,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               SizedBox(width: 12.w),
               Expanded(
                 child: Text(
-                  'Keep your password secure and don\'t share it with anyone.',
+  AppStrings.get('passwordSecurityTip'),
                   style: TextStyle(
                     fontSize: 12.sp,
                     color: AppColors.textMedium,
@@ -558,7 +558,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     return SizedBox(
       width: double.infinity,
       child: CustomButton(
-        text: 'Sign In Now',
+  text: AppStrings.get('signInNow'),
         onPressed: () => context.go(AppRoutes.login),
       ),
     );
@@ -579,7 +579,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Password updated successfully!'),
+      content: Text(AppStrings.get('passwordUpdatedSuccess')),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -593,7 +593,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Failed to reset password. Please try again.'),
+      content: Text(AppStrings.get('passwordResetFailed')),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(

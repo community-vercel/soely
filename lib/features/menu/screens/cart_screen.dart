@@ -7,8 +7,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:soely/core/constant/app_colors.dart';
 import 'package:soely/core/constant/app_strings.dart';
+import 'package:soely/core/services/language_service.dart';
 import 'package:soely/features/providers/auth_proveder.dart';
 import 'package:soely/features/providers/cart_provider.dart';
+import 'package:soely/features/providers/checkout_provider.dart';
+import 'package:soely/shared/models/order.dart';
 
 import '../../../core/routes/app_routes.dart';
 import '../../../shared/models/cart_item.dart';
@@ -35,7 +38,8 @@ class _CartScreenState extends State<CartScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isWeb = kIsWeb && screenWidth > 600;
       DateTime? _lastPressedAt;
-
+    return Consumer<LanguageService>(
+      builder: (context, languageService, _) {
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) async {
@@ -53,7 +57,7 @@ class _CartScreenState extends State<CartScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Press back again to exit',
+  AppStrings.get('pressBackAgain'),
                 style: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   color: Colors.white,
@@ -89,7 +93,7 @@ class _CartScreenState extends State<CartScreen> {
         ),
       ),
     );
-  }
+  });}
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
@@ -153,7 +157,7 @@ onPressed: () {
             ),
             SizedBox(height: isWeb ? 32 : 24),
             Text(
-              'Your cart is empty',
+  AppStrings.get('emptyCart'),
               style: TextStyle(
                 fontSize: isWeb ? 28 : 22,
                 fontWeight: FontWeight.w700,
@@ -163,7 +167,7 @@ onPressed: () {
             ),
             SizedBox(height: 12),
             Text(
-              'Add some delicious food to get started',
+  AppStrings.get('addFoodToStart'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: isWeb ? 16 : 14,
@@ -176,7 +180,7 @@ onPressed: () {
               width: isWeb ? 240 : 200,
               height: isWeb ? 54 : 59,
               child: CustomButton(
-                text: 'Browse Menu',
+  text: AppStrings.get('browseMenu'),
                 onPressed: () => context.go(AppRoutes.menu),
               ),
             ),
@@ -250,64 +254,83 @@ onPressed: () {
       ],
     );
   }
+// Add this to your _buildDeliveryToggle method in CartScreen
 
- 
-  Widget _buildDeliveryToggle(bool isWeb) {
-    return Container(
-      padding: isWeb ? const EdgeInsets.all(6) : EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      decoration: isWeb ? BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ) : null,
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildToggleButton(AppStrings.delivery, false, isWeb, isDisabled: true),
-          ),
-          SizedBox(width: isWeb ? 8 : 12.w),
-          Expanded(
-            child: _buildToggleButton(AppStrings.takeaway, true, isWeb),
-          ),
-        ],
-      ),
-    );
-  }
+Widget _buildDeliveryToggle(bool isWeb) {
+  return Consumer<CheckoutProvider>(
+    builder: (context, checkoutProvider, child) {
+      final isDelivery = checkoutProvider.deliveryType == DeliveryType.delivery;
+      
+      return Container(
+        padding: isWeb ? const EdgeInsets.all(6) : EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+        decoration: isWeb ? BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ) : null,
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildToggleButton(
+                AppStrings.delivery,
+                isDelivery,
+                isWeb,
+                onTap: () {
+                  checkoutProvider.setDeliveryType(DeliveryType.delivery);
+                },
+              ),
+            ),
+            SizedBox(width: isWeb ? 8 : 12.w),
+            Expanded(
+              child: _buildToggleButton(
+                AppStrings.takeaway,
+                !isDelivery,
+                isWeb,
+                onTap: () {
+                  checkoutProvider.setDeliveryType(DeliveryType.pickup);
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
-  Widget _buildToggleButton(String text, bool isSelected, bool isWeb, {bool isDisabled = false}) {
-    return AnimatedContainer(
+Widget _buildToggleButton(
+  String text,
+  bool isSelected,
+  bool isWeb, {
+  VoidCallback? onTap,
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: EdgeInsets.symmetric(vertical: isWeb ? 18 : 12.h),
       decoration: BoxDecoration(
-        gradient: isSelected && !isDisabled
+        gradient: isSelected
             ? LinearGradient(
                 colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               )
             : null,
-        color: isDisabled 
-            ? Colors.grey.shade100
-            : isSelected 
-                ? null
-                : (isWeb ? Colors.grey.shade50 : Colors.white),
+        color: isSelected ? null : (isWeb ? Colors.grey.shade50 : Colors.white),
         borderRadius: BorderRadius.circular(isWeb ? 12 : 8.r),
         border: Border.all(
-          color: isDisabled
-              ? Colors.grey.shade300
-              : isSelected 
-                  ? AppColors.primary 
-                  : Colors.grey.shade200,
+          color: isSelected ? AppColors.primary : Colors.grey.shade200,
           width: isWeb ? 0 : 1,
         ),
-        boxShadow: isSelected && !isDisabled
+        boxShadow: isSelected
             ? [
                 BoxShadow(
                   color: AppColors.primary.withOpacity(0.25),
@@ -317,35 +340,19 @@ onPressed: () {
               ]
             : null,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (isDisabled)
-            Icon(
-              Icons.block,
-              size: isWeb ? 18 : 16.sp,
-              color: Colors.grey.shade500,
-            ),
-          if (isDisabled) SizedBox(width: isWeb ? 8 : 6.w),
-          Text(
-            isDisabled ? '$text ' : text,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: isWeb ? 16 : 14.sp,
-              fontWeight: FontWeight.w600,
-              color: isDisabled
-                  ? Colors.grey.shade500
-                  : isSelected 
-                      ? Colors.white 
-                      : AppColors.textMedium,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ],
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: isWeb ? 16 : 14.sp,
+          fontWeight: FontWeight.w600,
+          color: isSelected ? Colors.white : AppColors.textMedium,
+          letterSpacing: 0.3,
+        ),
       ),
-    );
-  }
-
+    ),
+  );
+}
   Widget _buildSpecialInstructions(bool isWeb) {
     return Container(
       padding: isWeb ? null : EdgeInsets.symmetric(horizontal: 16.w),
@@ -387,7 +394,7 @@ onPressed: () {
                 ),
                 SizedBox(width: isWeb ? 14 : 8.w),
                 Text(
-                  'Special Instructions',
+  AppStrings.get('specialInstructions'),
                   style: TextStyle(
                     fontSize: isWeb ? 19 : 16.sp,
                     fontWeight: FontWeight.w600,
@@ -403,7 +410,8 @@ onPressed: () {
               maxLines: 4,
               maxLength: 200,
               decoration: InputDecoration(
-                hintText: 'Any special requests or instructions for your takeaway order...',
+hintText: AppStrings.get('specialInstructionsHint'),
+
                 hintStyle: TextStyle(
                   color: Colors.grey.shade400,
                   fontSize: isWeb ? 15 : 14.sp,
@@ -549,7 +557,7 @@ onPressed: () {
                   Padding(
                     padding: EdgeInsets.only(bottom: isWeb ? 6 : 2.h),
                     child: Text(
-                      'Size: ${cartItem.selectedMealSize?.name}',
+      '${AppStrings.get('sizeLabel')} ${cartItem.selectedMealSize?.name}',
                       style: TextStyle(
                         fontSize: isWeb ? 14 : 12.sp,
                         color: Colors.grey.shade600,
@@ -562,7 +570,7 @@ onPressed: () {
                   Padding(
                     padding: EdgeInsets.only(bottom: isWeb ? 6 : 2.h),
                     child: Text(
-                      'Extras: ${cartItem.selectedExtras.map((e) => e.name).join(', ')}',
+      '${AppStrings.get('extrasLabel')} ${cartItem.selectedExtras.map((e) => e.name).join(', ')}',
                       style: TextStyle(
                         fontSize: isWeb ? 14 : 12.sp,
                         color: Colors.grey.shade600,
@@ -573,7 +581,7 @@ onPressed: () {
 
                 if (cartItem.selectedAddons.isNotEmpty)
                   Text(
-                    'Addons: ${cartItem.selectedAddons.map((a) => a.name).join(', ')}',
+    '${AppStrings.get('addonsLabel')} ${cartItem.selectedAddons.map((a) => a.name).join(', ')}',
                     style: TextStyle(
                       fontSize: isWeb ? 14 : 12.sp,
                       color: Colors.grey.shade600,
@@ -848,7 +856,7 @@ onPressed: () {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Order Summary',
+  AppStrings.get('orderSummary'),
             style: TextStyle(
               fontSize: isWeb ? 24 : 20.sp,
               fontWeight: FontWeight.w700,

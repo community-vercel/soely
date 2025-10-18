@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:soely/core/constant/app_colors.dart';
+import 'package:soely/core/constant/app_strings.dart';
+import 'package:soely/core/services/language_service.dart';
 import 'package:soely/core/utils/responsive_utils.dart';
 import 'package:soely/shared/widgets/ooter.dart';
 
@@ -12,45 +15,50 @@ class AboutUsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
-    return Scaffold(
-      backgroundColor: isWeb ? const Color(0xFFFAFAFA) : Colors.white,
-      appBar: _buildAppBar(context, isWeb),
-      body: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        child: Column(
-          children: [
-            Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 1400.w),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isWeb ? 60.w : 16.w,
-                    vertical: isWeb ? 40.h : 24.h,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeroSection(isWeb),
-                      SizedBox(height: isWeb ? 60.h : 40.h),
-                      _buildStorySection(isWeb),
-                      SizedBox(height: isWeb ? 60.h : 40.h),
-                      _buildValuesSection(isWeb),
-                      SizedBox(height: isWeb ? 60.h : 40.h),
-                      _buildMissionSection(isWeb),
-                      SizedBox(height: isWeb ? 60.h : 40.h),
-                    ],
+    // ✅ WRAP WITH Consumer TO REBUILD ON LANGUAGE CHANGE
+    return Consumer<LanguageService>(
+      builder: (context, languageService, _) {
+        return Scaffold(
+          backgroundColor: isWeb ? const Color(0xFFFAFAFA) : Colors.white,
+          appBar: _buildAppBar(context, isWeb),
+          body: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Column(
+              children: [
+                Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: 1400.w),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isWeb ? 60.w : 16.w,
+                        vertical: isWeb ? 40.h : 24.h,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeroSection(isWeb),
+                          SizedBox(height: isWeb ? 60.h : 40.h),
+                          _buildStorySection(isWeb),
+                          SizedBox(height: isWeb ? 60.h : 40.h),
+                          _buildValuesSection(isWeb),
+                          SizedBox(height: isWeb ? 60.h : 40.h),
+                          _buildMissionSection(isWeb),
+                          SizedBox(height: isWeb ? 60.h : 40.h),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                if (isWeb)
+                  Container(
+                    width: double.infinity,
+                    child: FoodKingFooter(),
+                  ),
+              ],
             ),
-            if (isWeb)
-              Container(
-                width: double.infinity,
-                child: FoodKingFooter(),
-              ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -60,10 +68,10 @@ class AboutUsScreen extends StatelessWidget {
       elevation: 0.5,
       leading: IconButton(
         icon: Icon(Icons.arrow_back, color: AppColors.textDark, size: 24.sp),
-        onPressed: () => context.pop(),
+        onPressed: () => context.canPop() ? context.pop() : context.go('/home'),
       ),
       title: Text(
-        'Acerca de Nosotros',
+        AppStrings.get('aboutUs'),
         style: TextStyle(
           fontSize: isWeb ? 24.sp : 20.sp,
           fontWeight: FontWeight.w700,
@@ -98,7 +106,7 @@ class AboutUsScreen extends StatelessWidget {
           ),
           SizedBox(height: 24.h),
           Text(
-            'Bienvenido a Saborly',
+            AppStrings.get('welcomeToApp').replaceAll('{appName}', AppStrings.appName),
             style: TextStyle(
               fontSize: isWeb ? 36.sp : 28.sp,
               fontWeight: FontWeight.w800,
@@ -109,7 +117,7 @@ class AboutUsScreen extends StatelessWidget {
           ),
           SizedBox(height: 16.h),
           Text(
-            'Tu destino para la mejor comida rápida',
+            AppStrings.get('bestFastFoodDestination'),
             style: TextStyle(
               fontSize: isWeb ? 20.sp : 16.sp,
               fontWeight: FontWeight.w500,
@@ -127,7 +135,7 @@ class AboutUsScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Nuestra Historia', isWeb),
+        _buildSectionTitle(AppStrings.get('ourStory'), isWeb),
         SizedBox(height: 24.h),
         Container(
           padding: EdgeInsets.all(isWeb ? 32.w : 20.w),
@@ -143,11 +151,7 @@ class AboutUsScreen extends StatelessWidget {
             ],
           ),
           child: Text(
-            'Saborly nació de una pasión por ofrecer comida deliciosa y de calidad. '
-            'Desde nuestros inicios, nos hemos comprometido a servir los mejores platos, '
-            'preparados con ingredientes frescos y recetas auténticas. Cada día trabajamos '
-            'para superar las expectativas de nuestros clientes y crear experiencias '
-            'culinarias memorables.',
+            AppStrings.get('storyDescription').replaceAll('{appName}', AppStrings.appName),
             style: TextStyle(
               fontSize: isWeb ? 18.sp : 15.sp,
               fontWeight: FontWeight.w400,
@@ -165,28 +169,58 @@ class AboutUsScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Nuestros Valores', isWeb),
+        _buildSectionTitle(AppStrings.get('ourValues'), isWeb),
         SizedBox(height: 24.h),
         LayoutBuilder(
           builder: (context, constraints) {
             if (isWeb && constraints.maxWidth > 800) {
               return Row(
                 children: [
-                  Expanded(child: _buildValueCard('Calidad', Icons.star, 'Ingredientes frescos y de primera calidad', isWeb)),
+                  Expanded(child: _buildValueCard(
+                    AppStrings.get('quality'), 
+                    Icons.star, 
+                    AppStrings.get('qualityDescription'), 
+                    isWeb
+                  )),
                   SizedBox(width: 20.w),
-                  Expanded(child: _buildValueCard('Rapidez', Icons.flash_on, 'Servicio rápido sin comprometer la calidad', isWeb)),
+                  Expanded(child: _buildValueCard(
+                    AppStrings.get('speed'), 
+                    Icons.flash_on, 
+                    AppStrings.get('speedDescription'), 
+                    isWeb
+                  )),
                   SizedBox(width: 20.w),
-                  Expanded(child: _buildValueCard('Pasión', Icons.favorite, 'Amor por lo que hacemos en cada plato', isWeb)),
+                  Expanded(child: _buildValueCard(
+                    AppStrings.get('passion'), 
+                    Icons.favorite, 
+                    AppStrings.get('passionDescription'), 
+                    isWeb
+                  )),
                 ],
               );
             }
             return Column(
               children: [
-                _buildValueCard('Calidad', Icons.star, 'Ingredientes frescos y de primera calidad', isWeb),
+                _buildValueCard(
+                  AppStrings.get('quality'), 
+                  Icons.star, 
+                  AppStrings.get('qualityDescription'), 
+                  isWeb
+                ),
                 SizedBox(height: 16.h),
-                _buildValueCard('Rapidez', Icons.flash_on, 'Servicio rápido sin comprometer la calidad', isWeb),
+                _buildValueCard(
+                  AppStrings.get('speed'), 
+                  Icons.flash_on, 
+                  AppStrings.get('speedDescription'), 
+                  isWeb
+                ),
                 SizedBox(height: 16.h),
-                _buildValueCard('Pasión', Icons.favorite, 'Amor por lo que hacemos en cada plato', isWeb),
+                _buildValueCard(
+                  AppStrings.get('passion'), 
+                  Icons.favorite, 
+                  AppStrings.get('passionDescription'), 
+                  isWeb
+                ),
               ],
             );
           },
@@ -267,7 +301,7 @@ class AboutUsScreen extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'Nuestra Misión',
+            AppStrings.get('ourMission'),
             style: TextStyle(
               fontSize: isWeb ? 32.sp : 24.sp,
               fontWeight: FontWeight.w800,
@@ -276,9 +310,7 @@ class AboutUsScreen extends StatelessWidget {
           ),
           SizedBox(height: 20.h),
           Text(
-            'Hacer que cada comida sea una experiencia especial, '
-            'ofreciendo sabores auténticos y un servicio excepcional '
-            'que supere las expectativas de nuestros clientes.',
+            AppStrings.get('missionDescription'),
             style: TextStyle(
               fontSize: isWeb ? 18.sp : 15.sp,
               fontWeight: FontWeight.w400,

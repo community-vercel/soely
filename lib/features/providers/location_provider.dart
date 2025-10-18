@@ -32,27 +32,7 @@ class LocationProvider extends ChangeNotifier {
       await Future.delayed(const Duration(milliseconds: 500));
       
       _addresses = [
-        const DeliveryAddress(
-          id: '1',
-          type: 'home',
-          address: 'House 24, Road 05, Gulshan-2',
-          apartment: 'Flat 3C',
-          instructions: 'Ring the bell twice',
-          latitude: 23.7925,
-          longitude: 90.4149,
-          isDefault: true,
-        ),
-        const DeliveryAddress(
-          id: '2',
-          type: 'work',
-          address: 'House 24, Road 05, Gulshan-2',
-          apartment: 'Office 5B',
-          instructions: 'Call when you arrive',
-          latitude: 23.7936,
-          longitude: 90.4006,
-          isDefault: false,
-        ),
-      ];
+     ];
 
       // Auto-select default address
       if (_addresses.isNotEmpty) {
@@ -65,7 +45,6 @@ class LocationProvider extends ChangeNotifier {
       }
     } catch (e) {
       _setError('Failed to load addresses: ${e.toString()}');
-      debugPrint('LocationProvider loadAddresses error: $e');
     } finally {
       _setLoading(false);
     }
@@ -92,7 +71,6 @@ class LocationProvider extends ChangeNotifier {
       }
     } catch (e) {
       _setError('Failed to add address: ${e.toString()}');
-      debugPrint('LocationProvider addAddress error: $e');
     } finally {
       _setLoading(false);
     }
@@ -117,7 +95,6 @@ class LocationProvider extends ChangeNotifier {
       }
     } catch (e) {
       _setError('Failed to update address: ${e.toString()}');
-      debugPrint('LocationProvider updateAddress error: $e');
     } finally {
       _setLoading(false);
     }
@@ -139,7 +116,6 @@ class LocationProvider extends ChangeNotifier {
       }
     } catch (e) {
       _setError('Failed to delete address: ${e.toString()}');
-      debugPrint('LocationProvider deleteAddress error: $e');
     } finally {
       _setLoading(false);
     }

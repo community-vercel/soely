@@ -12,8 +12,11 @@ import 'package:soely/features/auth/screens/eemailVerificationScreen.dart';
 import 'package:soely/features/menu/screens/offersScreen.dart';
 import 'package:soely/features/menu/screens/order_history.dart';
 import 'package:soely/features/menu/screens/order_status.dart';
+import 'package:soely/features/menu/screens/ourfaq.dart';
+import 'package:soely/features/menu/screens/ourprivacy.dart';
 import 'package:soely/features/menu/screens/payment_scree.dart';
 import 'package:soely/features/menu/screens/profile_screen.dart';
+import 'package:soely/features/menu/screens/search_results_page.dart';
 import 'package:soely/features/menu/screens/theContactScreen.dart';
 import 'package:soely/features/providers/auth_proveder.dart';
 
@@ -33,7 +36,9 @@ class AppRoutes {
   static const String signup = '/signup';
   static const String forgotPassword = '/forgot-password';
   static const String resetPassword = '/reset-password';
-
+  static const String orders = '/orders';
+  static const String privacy = '/privacy';
+static const String faq = '/faq';
   static const String home = '/home';
   static const String menu = '/menu';
   static const String offer = '/offer';
@@ -41,6 +46,7 @@ class AppRoutes {
   static const String emailVerification = '/email-verification';
  static const String about = '/about';
   static const String contact = '/contact';
+  static const String search = '/search'; // ✅ NEW: Add search route
 
   static const String foodDetail = '/food-detail';
   static const String cart = '/cart';
@@ -109,12 +115,15 @@ class AppRoutes {
             name: 'profile',
             builder: (context, state) => const ProfileScreen(),
           ),
-        ],
-      ),
-      GoRoute(
+           GoRoute(
         path: login,
         name: 'login',
         builder: (context, state) => const LoginScreen(),
+      ),
+        GoRoute(
+        path: orders,
+        name: 'orders',
+        builder: (context, state) => const OrderHistoryScreen(),
       ),
       GoRoute(
         path: signup,
@@ -145,6 +154,16 @@ class AppRoutes {
         builder: (context, state) => const CartScreen(),
       ),
       GoRoute(
+  path: privacy,
+  name: 'privacy',
+  builder: (context, state) => const PrivacyPolicyScreen(),
+),
+GoRoute(
+  path: faq,
+  name: 'faq',
+  builder: (context, state) => const FAQScreen(),
+),
+      GoRoute(
         path: checkout,
         name: 'checkout',
         builder: (context, state) => const CheckoutScreen(),
@@ -159,6 +178,9 @@ class AppRoutes {
         name: 'order-history',
         builder: (context, state) => const OrderHistoryScreen(),
       ),
+        ],
+      ),
+     
       // Only show splash screen on mobile
       if (!kIsWeb)
         GoRoute(
@@ -172,6 +194,13 @@ class AppRoutes {
           return OTPVerificationScreen(email: email);
         },
       ),
+        GoRoute(
+          path: AppRoutes.search,
+          builder: (context, state) {
+            final initialQuery = state.extra as String?;
+            return SearchResultsPage(initialQuery: initialQuery);
+          },
+        ),
       GoRoute(
         path: '/change-password',
         name: 'change-password',
@@ -182,7 +211,6 @@ class AppRoutes {
         name: 'order-status',
         builder: (context, state) {
           final orderId = state.pathParameters['orderId'] ?? '';
-          debugPrint("OrderStatusScreen: Received orderId: $orderId");
           return OrderStatusScreen(orderId: orderId);
         },
       ),

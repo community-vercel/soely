@@ -9,6 +9,7 @@ class CartItem extends Equatable {
   final List<Extra> selectedExtras;
   final List<Addon> selectedAddons;
   final String? specialInstructions;
+  final double unitPrice;
   final double totalPrice;
 
   const CartItem({
@@ -19,6 +20,7 @@ class CartItem extends Equatable {
     this.selectedExtras = const [],
     this.selectedAddons = const [],
     this.specialInstructions,
+    required this.unitPrice,
     required this.totalPrice,
   });
 
@@ -31,6 +33,7 @@ class CartItem extends Equatable {
         selectedExtras,
         selectedAddons,
         specialInstructions,
+        unitPrice,
         totalPrice,
       ];
 
@@ -42,6 +45,7 @@ class CartItem extends Equatable {
     List<Extra>? selectedExtras,
     List<Addon>? selectedAddons,
     String? specialInstructions,
+    double? unitPrice,
     double? totalPrice,
   }) {
     return CartItem(
@@ -52,6 +56,7 @@ class CartItem extends Equatable {
       selectedExtras: selectedExtras ?? this.selectedExtras,
       selectedAddons: selectedAddons ?? this.selectedAddons,
       specialInstructions: specialInstructions ?? this.specialInstructions,
+      unitPrice: unitPrice ?? this.unitPrice,
       totalPrice: totalPrice ?? this.totalPrice,
     );
   }
@@ -86,6 +91,7 @@ class CartItem extends Equatable {
       'selectedExtras': selectedExtras.map((x) => x.toMap()).toList(),
       'selectedAddons': selectedAddons.map((x) => x.toMap()).toList(),
       'specialInstructions': specialInstructions,
+      'unitPrice': unitPrice,
       'totalPrice': totalPrice,
     };
   }
@@ -105,6 +111,7 @@ class CartItem extends Equatable {
         map['selectedAddons']?.map((x) => Addon.fromMap(x)) ?? [],
       ),
       specialInstructions: map['specialInstructions'],
+      unitPrice: map['unitPrice']?.toDouble() ?? 0.0,
       totalPrice: map['totalPrice']?.toDouble() ?? 0.0,
     );
   }

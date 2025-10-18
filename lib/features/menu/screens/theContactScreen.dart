@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:soely/core/constant/app_colors.dart';
+import 'package:soely/core/constant/app_strings.dart';
 import 'package:soely/core/services/banner_service.dart';
+import 'package:soely/core/services/language_service.dart';
 import 'package:soely/core/utils/responsive_utils.dart';
 import 'package:soely/shared/widgets/ooter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -22,12 +25,14 @@ class _ContactScreenState extends State<ContactScreen> {
   final _messageController = TextEditingController();
   final _phoneController = TextEditingController();
   bool _isSubmitting = false;
+  
   Future<void> _launchUrl(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       throw 'Could not launch $url';
     }
   }
+  
   @override
   void dispose() {
     _nameController.dispose();
@@ -59,7 +64,7 @@ class _ContactScreenState extends State<ContactScreen> {
           if (result['success']) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(result['message']),
+                content: Text(AppStrings.get('formSubmissionSuccess')),
                 backgroundColor: AppColors.success,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
@@ -79,7 +84,7 @@ class _ContactScreenState extends State<ContactScreen> {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(result['message']),
+                content: Text(AppStrings.get('formSubmissionError')),
                 backgroundColor: AppColors.error,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
@@ -96,7 +101,7 @@ class _ContactScreenState extends State<ContactScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Error inesperado. Por favor intenta de nuevo.'),
+              content: Text(AppStrings.get('unexpectedError')),
               backgroundColor: AppColors.error,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -113,60 +118,65 @@ class _ContactScreenState extends State<ContactScreen> {
   Widget build(BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
-    return Scaffold(
-      backgroundColor: isWeb ? const Color(0xFFFAFAFA) : Colors.white,
-      appBar: _buildAppBar(context, isWeb),
-      body: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        child: Column(
-          children: [
-            Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 1400.w),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isWeb ? 60.w : 16.w,
-                    vertical: isWeb ? 40.h : 24.h,
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      if (isWeb && constraints.maxWidth > 900) {
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 5,
-                              child: _buildContactForm(isWeb),
-                            ),
-                            SizedBox(width: 40.w),
-                            Expanded(
-                              flex: 4,
-                              child: _buildContactInfo(isWeb),
-                            ),
-                          ],
-                        );
-                      }
-                      return Column(
-                        children: [
-                          _buildContactForm(isWeb),
-                          SizedBox(height: 32.h),
-                          _buildContactInfo(isWeb),
-                        ],
-                      );
-                    },
+    // ✅ WRAP WITH Consumer TO REBUILD ON LANGUAGE CHANGE
+    return Consumer<LanguageService>(
+      builder: (context, languageService, _) {
+        return Scaffold(
+          backgroundColor: isWeb ? const Color(0xFFFAFAFA) : Colors.white,
+          appBar: _buildAppBar(context, isWeb),
+          body: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Column(
+              children: [
+                Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: 1400.w),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isWeb ? 60.w : 16.w,
+                        vertical: isWeb ? 40.h : 24.h,
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          if (isWeb && constraints.maxWidth > 900) {
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 5,
+                                  child: _buildContactForm(isWeb),
+                                ),
+                                SizedBox(width: 40.w),
+                                Expanded(
+                                  flex: 4,
+                                  child: _buildContactInfo(isWeb),
+                                ),
+                              ],
+                            );
+                          }
+                          return Column(
+                            children: [
+                              _buildContactForm(isWeb),
+                              SizedBox(height: 32.h),
+                              _buildContactInfo(isWeb),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                SizedBox(height: isWeb ? 60.h : 40.h),
+                if (isWeb)
+                  Container(
+                    width: double.infinity,
+                    child: FoodKingFooter(),
+                  ),
+              ],
             ),
-            SizedBox(height: isWeb ? 60.h : 40.h),
-            if (isWeb)
-              Container(
-                width: double.infinity,
-                child: FoodKingFooter(),
-              ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -176,10 +186,10 @@ class _ContactScreenState extends State<ContactScreen> {
       elevation: 0.5,
       leading: IconButton(
         icon: Icon(Icons.arrow_back, color: AppColors.textDark, size: 24.sp),
-        onPressed: () => context.pop(),
+        onPressed: () => context.canPop() ? context.pop() : context.go('/profile'),
       ),
       title: Text(
-        'Contáctanos',
+        AppStrings.get('contactUs'),
         style: TextStyle(
           fontSize: isWeb ? 24.sp : 20.sp,
           fontWeight: FontWeight.w700,
@@ -210,31 +220,22 @@ class _ContactScreenState extends State<ContactScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Envíanos un Mensaje',
+              AppStrings.get('sendUsMessage'),
               style: TextStyle(
                 fontSize: isWeb ? 28.sp : 22.sp,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textDark,
               ),
             ),
-            SizedBox(height: 8.h),
-            Text(
-              'Completa el formulario y nos pondremos en contacto contigo pronto',
-              style: TextStyle(
-                fontSize: isWeb ? 16.sp : 14.sp,
-                fontWeight: FontWeight.w400,
-                color: AppColors.textLight,
-              ),
-            ),
             SizedBox(height: 32.h),
             _buildTextField(
               controller: _nameController,
-              label: 'Nombre Completo',
-              hint: 'Tu nombre',
+              label: AppStrings.get('fullName'),
+              hint: AppStrings.get('yourName'),
               icon: Icons.person_outline,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Por favor ingresa tu nombre';
+                  return AppStrings.pleaseEnterName;
                 }
                 return null;
               },
@@ -243,16 +244,16 @@ class _ContactScreenState extends State<ContactScreen> {
             SizedBox(height: 20.h),
             _buildTextField(
               controller: _emailController,
-              label: 'Correo Electrónico',
-              hint: 'tu@email.com',
+              label: AppStrings.email,
+              hint: AppStrings.get('yourEmail'),
               icon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Por favor ingresa tu correo';
+                  return AppStrings.pleaseEnterEmail;
                 }
                 if (!value.contains('@')) {
-                  return 'Ingresa un correo válido';
+                  return AppStrings.pleaseEnterValidEmail;
                 }
                 return null;
               },
@@ -261,21 +262,29 @@ class _ContactScreenState extends State<ContactScreen> {
             SizedBox(height: 20.h),
             _buildTextField(
               controller: _phoneController,
-              label: 'Teléfono (Opcional)',
-              hint: '+34 123 456 789',
+              label: AppStrings.get('phoneNumber'),
+              hint: AppStrings.get('yourPhone'),
               icon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value != null && value.isNotEmpty) {
+                  if (!RegExp(r'^\+?[1-9]\d{1,14}$').hasMatch(value)) {
+                    return AppStrings.get('pleaseEnterValidPhone');
+                  }
+                }
+                return null;
+              },
               isWeb: isWeb,
             ),
             SizedBox(height: 20.h),
             _buildTextField(
               controller: _subjectController,
-              label: 'Asunto',
-              hint: 'Asunto del mensaje',
+              label: AppStrings.get('subject'),
+              hint: AppStrings.get('yourSubject'),
               icon: Icons.subject,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Por favor ingresa el asunto';
+                  return AppStrings.get('pleaseEnterSubject');
                 }
                 return null;
               },
@@ -284,19 +293,13 @@ class _ContactScreenState extends State<ContactScreen> {
             SizedBox(height: 20.h),
             _buildTextField(
               controller: _messageController,
-              label: 'Mensaje',
-              hint: 'Escribe tu mensaje aquí...',
+              label: AppStrings.get('message'),
+              hint: AppStrings.get('yourMessage'),
               icon: Icons.message_outlined,
               maxLines: 5,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Por favor ingresa tu mensaje';
-                }
-                if (value.length < 10) {
-                  return 'El mensaje debe tener al menos 10 caracteres';
-                }
-                if (value.length > 2000) {
-                  return 'El mensaje no puede exceder 2000 caracteres';
+                  return AppStrings.get('pleaseEnterMessage');
                 }
                 return null;
               },
@@ -308,16 +311,6 @@ class _ContactScreenState extends State<ContactScreen> {
               height: 56.h,
               child: ElevatedButton(
                 onPressed: _isSubmitting ? null : _submitForm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 4,
-                  shadowColor: AppColors.primary.withOpacity(0.4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
-                ),
                 child: _isSubmitting
                     ? SizedBox(
                         height: 20.h,
@@ -328,7 +321,7 @@ class _ContactScreenState extends State<ContactScreen> {
                         ),
                       )
                     : Text(
-                        'Enviar Mensaje',
+                        AppStrings.get('sendMessage'),
                         style: TextStyle(
                           fontSize: isWeb ? 18.sp : 16.sp,
                           fontWeight: FontWeight.w600,
@@ -413,7 +406,7 @@ class _ContactScreenState extends State<ContactScreen> {
     return Column(
       children: [
         _buildInfoCard(
-          title: 'Llámanos',
+          title: AppStrings.get('callUs'),
           icon: Icons.phone,
           children: [
             _buildInfoItem(
@@ -424,7 +417,7 @@ class _ContactScreenState extends State<ContactScreen> {
             SizedBox(height: 12.h),
             _buildInfoItem(
               icon: Icons.access_time,
-              text: 'Lun - Dom: 12:00 - 23:00',
+              text: AppStrings.get('businessHours'),
               isWeb: isWeb,
             ),
           ],
@@ -432,12 +425,12 @@ class _ContactScreenState extends State<ContactScreen> {
         ),
         SizedBox(height: 20.h),
         _buildInfoCard(
-          title: 'Visítanos',
+          title: AppStrings.get('visitUs'),
           icon: Icons.location_on,
           children: [
             _buildInfoItem(
               icon: Icons.place,
-              text: 'C/ de Pere IV, 208, Sant Martí, 08005 Barcelona, Spain',
+              text: AppStrings.get('address'),
               isWeb: isWeb,
             ),
           ],
@@ -445,18 +438,18 @@ class _ContactScreenState extends State<ContactScreen> {
         ),
         SizedBox(height: 20.h),
         _buildInfoCard(
-          title: 'Escríbenos',
+          title: AppStrings.get('writeUs'),
           icon: Icons.email,
           children: [
             _buildInfoItem(
               icon: Icons.email,
-              text: 'info@saborly.es',
+              text: AppStrings.get('infoEmail'),
               isWeb: isWeb,
             ),
             SizedBox(height: 12.h),
             _buildInfoItem(
               icon: Icons.support_agent,
-              text: 'soporte@saborly.es',
+              text: AppStrings.get('supportEmail'),
               isWeb: isWeb,
             ),
           ],
@@ -567,7 +560,7 @@ class _ContactScreenState extends State<ContactScreen> {
       child: Column(
         children: [
           Text(
-            'Síguenos',
+            AppStrings.get('followUs'),
             style: TextStyle(
               fontSize: isWeb ? 20.sp : 18.sp,
               fontWeight: FontWeight.w700,
@@ -578,15 +571,15 @@ class _ContactScreenState extends State<ContactScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-                _buildSocialButton(Icons.facebook, () {
-          _launchUrl('https://www.facebook.com/SaborlyBurger/');
-        }),
-        _buildSocialButton(Icons.camera_alt, () {
-          _launchUrl('https://www.instagram.com/saborly.es/?igsh=eDg0a2FvZ2Zqbmg%3D&utm_source=qr#');
-        }),
-        _buildSocialButton(Icons.play_arrow, () {
-          _launchUrl('https://www.youtube.com/@saborlyburger'); // example
-        }),
+              _buildSocialButton(Icons.facebook, () {
+                _launchUrl('https://www.facebook.com/SaborlyBurger/');
+              }),
+              _buildSocialButton(Icons.camera_alt, () {
+                _launchUrl('https://www.instagram.com/saborly.es/?igsh=eDg0a2FvZ2Zqbmg%3D&utm_source=qr#');
+              }),
+              _buildSocialButton(Icons.play_arrow, () {
+                _launchUrl('https://www.youtube.com/@saborlyburger');
+              }),
             ],
           ),
         ],

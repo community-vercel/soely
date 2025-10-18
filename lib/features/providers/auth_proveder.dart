@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:soely/core/services/notification_service.dart';
 import '../../../shared/models/user.dart';
 import '../../../core/services/api_service.dart';
 
@@ -68,160 +71,198 @@ String? get resetToken => _resetToken;
         }
       }
     } catch (e) {
-      debugPrint('Error checking auth status: $e');
       _setError('Failed to check authentication status');
     } finally {
       _setLoading(false);
     }
   }
 
-  Future<bool> signIn(String email, String password) async {
-    _setLoading(true);
-    _setError(null);
-    _setRequiresVerification(false);
+Future<bool> signIn(String email, String password) async {
+  _setLoading(true);
+  _setError(null);
+  _setRequiresVerification(false);
+  
+  try {
+    final response = await _apiService.login(email, password);
     
-    try {
-      final response = await _apiService.login(email, password);
+    if (response.isSuccess && response.data != null) {
+      _user = response.data!;
+      await _saveUserData();
       
-      if (response.isSuccess && response.data != null) {
+      // Register FCM token after successful login
+      await _registerFCMToken();
+      
+      _setLoading(false);
+      return true;
+    } else {
+      if (response.statusCode == 403 && 
+          response.error?.toLowerCase().contains('verify') == true) {
+        _setRequiresVerification(true, email);
+        _setError('Please verify your email before logging in');
+      } else {
+        _setError(response.error ?? 'Login failed. Please try again.');
+      }
+      _setLoading(false);
+      return false;
+    }
+  } catch (e) {
+    _setError('An error occurred during login. Please try again.');
+    _setLoading(false);
+    return false;
+  }
+}
+
+Future<bool> signUp(String firstName, String lastName, String email, 
+                    String phone, String password) async {
+  _setLoading(true);
+  _setError(null);
+  _setRequiresVerification(false);
+  
+  try {
+    final response = await _apiService.register(
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      phone: phone,
+      password: password,
+    );
+    
+    if (response.isSuccess) {
+      // Check if verification is required from rawData
+      final requiresVerification = response.rawData?['requiresVerification'] ?? false;
+      
+      if (requiresVerification) {
+        // OTP was sent, need verification
+        _setRequiresVerification(true, email);
+        _setLoading(false);
+        return true; // Return true to indicate registration request was successful
+      } else if (response.data != null) {
+        // Direct login (backward compatibility - though shouldn't happen with new API)
         _user = response.data!;
         await _saveUserData();
         _setLoading(false);
         return true;
       } else {
-        // Check if email verification is required
-        if (response.statusCode == 403 && 
-            response.error?.toLowerCase().contains('verify') == true) {
-          _setRequiresVerification(true, email);
-          _setError('Please verify your email before logging in');
-        } else {
-          _setError(response.error ?? 'Login failed. Please try again.');
-        }
+        _setError('Registration completed but user data is missing');
         _setLoading(false);
         return false;
       }
-    } catch (e) {
-      debugPrint('Login error: $e');
-      _setError('An error occurred during login. Please try again.');
+    } else {
+      _setError(response.error ?? 'Registration failed. Please try again.');
       _setLoading(false);
       return false;
     }
+  } catch (e) {
+    _setError('An error occurred during registration. Please try again.');
+    _setLoading(false);
+    return false;
   }
+}
 
-  Future<bool> signUp(String firstName, String lastName, String email, 
-                      String phone, String password) async {
-    _setLoading(true);
-    _setError(null);
-    _setRequiresVerification(false);
+Future<bool> verifyOTP(String email, String otp) async {
+  _setLoading(true);
+  _setError(null);
+  
+  try {
+    final response = await _apiService.verifyOTP(email, otp);
     
-    try {
-      final response = await _apiService.register(
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        phone: phone,
-        password: password,
+    if (response.isSuccess && response.data != null) {
+      _user = response.data!;
+      await _saveUserData();
+      
+      // Register FCM token after successful verification
+      await _registerFCMToken();
+      
+      _setRequiresVerification(false);
+      _setLoading(false);
+      return true;
+    } else {
+      _setError(response.error ?? 'Invalid or expired OTP');
+      _setLoading(false);
+      return false;
+    }
+  } catch (e) {
+    _setError('An error occurred. Please try again.');
+    _setLoading(false);
+    return false;
+  }
+}
+Future<void> refreshFCMToken() async {
+  await _registerFCMToken();
+}
+
+// Add method to test notification
+Future<bool> testNotification() async {
+  try {
+    final response = await _apiService.testNotification();
+    return response.isSuccess;
+  } catch (e) {
+    return false;
+  }
+}
+// Update signOut to remove FCM token
+Future<void> signOut() async {
+  _setLoading(true);
+  _setError(null);
+  
+  try {
+    // Remove FCM token before logout
+    await _apiService.removeFCMToken();
+    
+    await _apiService.logout();
+    await _clearUserData();
+    _user = null;
+    _setRequiresVerification(false);
+  } catch (e) {
+    await _clearUserData();
+    _user = null;
+    _setRequiresVerification(false);
+  } finally {
+    _setLoading(false);
+  }
+}
+Future<void> _registerFCMToken() async {
+  try {
+    final notificationService = NotificationService();
+    final fcmToken = notificationService.fcmToken;
+    
+    if (fcmToken != null) {
+      final response = await _apiService.updateFCMToken(
+        fcmToken: fcmToken,
+        deviceId: 'default',
+        platform: Platform.operatingSystem,
       );
       
       if (response.isSuccess) {
-        // Check if OTP verification is required
-        final requiresVerification = response.rawData?['requiresVerification'] ?? false;
-        
-        if (requiresVerification) {
-          _setRequiresVerification(true, email);
-          _setLoading(false);
-          return true; // Return true to indicate successful registration
-        } else if (response.data != null) {
-          // Direct login without verification (for backward compatibility)
-          _user = response.data!;
-          await _saveUserData();
-          _setLoading(false);
-          return true;
-        } else {
-          _setError('Registration completed but user data is missing');
-          _setLoading(false);
-          return false;
-        }
       } else {
-        _setError(response.error ?? 'Registration failed. Please try again.');
-        _setLoading(false);
-        return false;
       }
-    } catch (e) {
-      debugPrint('Registration error: $e');
-      _setError('An error occurred during registration. Please try again.');
-      _setLoading(false);
-      return false;
     }
+  } catch (e) {
   }
-
-  Future<bool> verifyOTP(String email, String otp) async {
-    _setLoading(true);
-    _setError(null);
-    
-    try {
-      final response = await _apiService.verifyOTP(email, otp);
-      
-      if (response.isSuccess && response.data != null) {
-        _user = response.data!;
-        await _saveUserData();
-        _setRequiresVerification(false);
-        _setLoading(false);
-        return true;
-      } else {
-        _setError(response.error ?? 'Invalid or expired OTP');
-        _setLoading(false);
-        return false;
-      }
-    } catch (e) {
-      debugPrint('Verify OTP error: $e');
-      _setError('An error occurred. Please try again.');
-      _setLoading(false);
-      return false;
-    }
-  }
-
-  Future<bool> resendOTP(String email) async {
-    _setLoading(true);
-    _setError(null);
-    
-    try {
-      final response = await _apiService.resendOTP(email);
-      
-      if (response.isSuccess) {
-        _setLoading(false);
-        return true;
-      } else {
-        _setError(response.error ?? 'Failed to send OTP');
-        _setLoading(false);
-        return false;
-      }
-    } catch (e) {
-      debugPrint('Resend OTP error: $e');
-      _setError('An error occurred. Please try again.');
-      _setLoading(false);
-      return false;
-    }
-  }
+}
+Future<bool> resendOTP(String email) async {
+  _setLoading(true);
+  _setError(null);
   
-  Future<void> signOut() async {
-    _setLoading(true);
-    _setError(null);
+  try {
+    final response = await _apiService.resendOTP(email);
     
-    try {
-      await _apiService.logout();
-      await _clearUserData();
-      _user = null;
-      _setRequiresVerification(false);
-    } catch (e) {
-      await _clearUserData();
-      _user = null;
-      _setRequiresVerification(false);
-      debugPrint('Error signing out: $e');
-    } finally {
+    if (response.isSuccess) {
       _setLoading(false);
+      return true;
+    } else {
+      _setError(response.error ?? 'Failed to send OTP');
+      _setLoading(false);
+      return false;
     }
+  } catch (e) {
+    _setError('An error occurred. Please try again.');
+    _setLoading(false);
+    return false;
   }
+}
+  
+
 
   Future<bool> updateProfile(String firstName, String lastName, String phone) async {
     _setLoading(true);
@@ -233,11 +274,8 @@ String? get resetToken => _resetToken;
         'lastName': lastName,
         'phone': phone,
       });
-      debugPrint("response is ${response.data}");
-      debugPrint("response is ${response.isSuccess}");
-
+ 
       if (response.isSuccess && response.data != null) {
-        debugPrint("response is the ${response}");
 
         _user = response.data!;
         await _saveUserData();
@@ -249,7 +287,6 @@ String? get resetToken => _resetToken;
         return false;
       }
     } catch (e) {
-      debugPrint('Profile update error: $e');
       _setError('An error occurred while updating profile. Please try again.');
       _setLoading(false);
       return false;
@@ -304,7 +341,6 @@ String? get resetToken => _resetToken;
         return false;
       }
     } catch (e) {
-      debugPrint('Change password error: $e');
       _setError('An error occurred while changing password. Please try again.');
       _setLoading(false);
       return false;
@@ -330,7 +366,6 @@ Future<bool> requestPasswordReset(String email) async {
       return false;
     }
   } catch (e) {
-    debugPrint('Request password reset error: $e');
     _setError('An error occurred. Please try again.');
     _setLoading(false);
     return false;
@@ -354,7 +389,6 @@ Future<bool> verifyPasswordResetOTP(String email, String otp) async {
       return false;
     }
   } catch (e) {
-    debugPrint('Verify password reset OTP error: $e');
     _setError('An error occurred. Please try again.');
     _setLoading(false);
     return false;
@@ -407,7 +441,6 @@ Future<bool> resetPassword({
       return false;
     }
   } catch (e) {
-    debugPrint('Reset password error: $e');
     _setError('An error occurred. Please try again.');
     _setLoading(false);
     return false;
@@ -430,7 +463,6 @@ Future<bool> resendPasswordResetOTP(String email) async {
       return false;
     }
   } catch (e) {
-    debugPrint('Resend password reset OTP error: $e');
     _setError('An error occurred. Please try again.');
     _setLoading(false);
     return false;

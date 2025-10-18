@@ -47,11 +47,9 @@ class BannerService {
       
 
       final response = await http.get(Uri.parse(url));
-              debugPrint("data recieving ${response.body}");
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        debugPrint("data recieving ${data}");
 
         List<dynamic> bannersJson = data['data'];
         return bannersJson.map((json) => BannerModel.fromJson(json)).toList();

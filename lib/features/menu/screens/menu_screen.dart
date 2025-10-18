@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:soely/core/constant/app_colors.dart';
 import 'package:soely/core/constant/app_strings.dart';
 import 'package:soely/features/providers/men_provider.dart';
+
 import 'package:soely/shared/widgets/ooter.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../shared/widgets/food_item_card.dart';
@@ -37,31 +38,30 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _initializeScreen());
   }
+Future<void> _initializeScreen() async {
+  final provider = context.read<MenuProvider>();
+  await provider.loadCategories();
 
-  Future<void> _initializeScreen() async {
-    final provider = context.read<MenuProvider>();
-    await provider.loadCategories();
-    
-    if (mounted && provider.categories.isNotEmpty) {
+  if (mounted && provider.categories.isNotEmpty) {
+    setState(() {
       _tabController = TabController(
         length: provider.categories.length + 1,
         vsync: this,
       );
       _tabController!.addListener(_onTabChanged);
+    });
 
-      if (_selectedCategoryId != null) {
-        final index = provider.categories.indexWhere(
-          (category) => category.id == _selectedCategoryId,
-        );
-        if (index != -1) {
-          _tabController!.index = index + 1;
-        }
+    if (_selectedCategoryId != null) {
+      final index = provider.categories.indexWhere(
+        (category) => category.id == _selectedCategoryId,
+      );
+      if (index != -1) {
+        _tabController!.index = index + 1;
       }
-      await provider.loadFoodItems(categoryId: _selectedCategoryId);
     }
+    await provider.loadFoodItems(categoryId: _selectedCategoryId);
   }
-
-  void _onTabChanged() {
+}void _onTabChanged() {
     if (_tabController == null) return;
     
     final provider = context.read<MenuProvider>();
@@ -119,7 +119,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Press back again to exit',
+  AppStrings.get('pressBackAgain'),
                     style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.white),
                   ),
                   duration: const Duration(seconds: 2),
@@ -142,8 +142,12 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                   return _buildLoadingState();
                 }
 
+                if (provider.error != null) {
+                  return _buildErrorState(provider.error!);
+                }
+
                 if (provider.categories.isEmpty) {
-                  return _buildEmptyState('Loading menu...');
+  return _buildEmptyState(AppStrings.get('noCategoriesAvailable'));
                 }
 
                 return CustomScrollView(
@@ -237,7 +241,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
           ),
           SizedBox(height: 24.h),
           Text(
-            'Loading delicious menu...',
+  AppStrings.get('loadingMenu'),
             style: GoogleFonts.poppins(
               fontSize: 16.sp,
               color: AppColors.textMedium,
@@ -275,6 +279,73 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
               fontWeight: FontWeight.w600,
             ),
           ),
+          SizedBox(height: 16.h),
+          ElevatedButton(
+            onPressed: () => context.read<MenuProvider>().loadFoodItems(categoryId: _selectedCategoryId),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+            ),
+            child: Text(
+  AppStrings.get('retry'),
+              style: GoogleFonts.poppins(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 80.sp,
+            color: AppColors.error,
+          ),
+          SizedBox(height: 16.h),
+          Text(
+  AppStrings.get('error'),
+            style: GoogleFonts.poppins(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            error,
+            style: GoogleFonts.poppins(
+              fontSize: 14.sp,
+              color: AppColors.textLight,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 16.h),
+          ElevatedButton(
+            onPressed: () => context.read<MenuProvider>().loadFoodItems(categoryId: _selectedCategoryId),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+            ),
+            child: Text(
+              'Retry',
+              style: GoogleFonts.poppins(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -307,7 +378,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                     ),
                     SizedBox(height: 8.h),
                     Text(
-                      'Discover our delicious offerings',
+  AppStrings.get('discoverOfferings'),
                       style: GoogleFonts.poppins(
                         fontSize: 16.sp,
                         color: AppColors.textMedium,
@@ -319,8 +390,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                 ElevatedButton.icon(
                   onPressed: _showFilterDialog,
                   icon: Icon(Icons.tune_rounded, size: 20.sp),
-                  label: Text('Filters', style: GoogleFonts.poppins(fontSize: 15.sp, fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
+label: Text(AppStrings.get('filters'), style: GoogleFonts.poppins(fontSize: 15.sp, fontWeight: FontWeight.w600)),                  style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 18.h),
@@ -405,7 +475,8 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                 ),
                 labelPadding: EdgeInsets.symmetric(horizontal: 4.w),
                 tabs: [
-                  _buildEnhancedTab('All Categories', Icons.apps_rounded),
+_buildEnhancedTab(AppStrings.get('allCategories'), Icons.apps_rounded),
+
                   ...provider.categories.map(
                     (category) => _buildEnhancedTab(
                       category.name.replaceAll('\n', ' '),
@@ -469,7 +540,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
               child: Row(
                 children: [
                   _buildModernFilterChip(
-                    'Vegetarian',
+  AppStrings.get('vegetarian'),
                     Icons.eco_rounded,
                     provider.showVegOnly,
                     () => provider.setVegFilter(!provider.showVegOnly),
@@ -477,7 +548,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                   ),
                   SizedBox(width: 12.w),
                   _buildModernFilterChip(
-                    'Non-Veg',
+  AppStrings.get('nonVegetarian'),
                     Icons.restaurant_rounded,
                     provider.showNonVegOnly,
                     () => provider.setNonVegFilter(!provider.showNonVegOnly),
@@ -485,7 +556,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                   ),
                   SizedBox(width: 12.w),
                   _buildModernFilterChip(
-                    'Popular',
+  AppStrings.get('popularItems'),
                     Icons.local_fire_department_rounded,
                     provider.showPopularOnly,
                     () => provider.setPopularFilter(!provider.showPopularOnly),
@@ -571,49 +642,51 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildFoodGridSliver(MenuProvider provider, double screenWidth) {
-    if (provider.isLoading) {
-      return SliverFillRemaining(
-        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-      );
-    }
-
-    if (provider.foodItems.isEmpty) {
-      return SliverFillRemaining(child: _buildEmptyState('No food items found'));
-    }
-
-    final crossAxisCount = _getCrossAxisCount(screenWidth);
-    final aspectRatio = screenWidth >= 1200 ? 0.75 : (screenWidth >= 600 ? 0.7 : 0.68);
-    final isWeb = screenWidth >= 1200;
-
-    return SliverPadding(
-      padding: EdgeInsets.fromLTRB(
-        isWeb ? 48.w : 16.w,
-        20.h,
-        isWeb ? 48.w : 16.w,
-        32.h,
-      ),
-      sliver: SliverGrid(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 20.w,
-          mainAxisSpacing: 20.h,
-          childAspectRatio: aspectRatio,
-        ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final item = provider.foodItems[index];
-            return FoodItemCard(
-              foodItem: item,
-              onTap: () => context.push(AppRoutes.foodDetail, extra: item),
-            );
-          },
-          childCount: provider.foodItems.length,
-        ),
-      ),
+Widget _buildFoodGridSliver(MenuProvider provider, double screenWidth) {
+  // Show loading indicator if provider is loading or if categories are loaded but food items are not yet available
+  if (provider.isLoading || (provider.categories.isNotEmpty && provider.foodItems.isEmpty)) {
+    return SliverFillRemaining(
+      child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
     );
   }
 
+  if (provider.foodItems.isEmpty) {
+    return SliverFillRemaining(
+      child: _buildEmptyState(AppStrings.get('noFoodItemsAvailable')),
+    );
+  }
+
+  final crossAxisCount = _getCrossAxisCount(screenWidth);
+  final aspectRatio = screenWidth >= 1200 ? 0.75 : (screenWidth >= 600 ? 0.7 : 0.68);
+  final isWeb = screenWidth >= 1200;
+
+  return SliverPadding(
+    padding: EdgeInsets.fromLTRB(
+      isWeb ? 48.w : 16.w,
+      20.h,
+      isWeb ? 48.w : 16.w,
+      32.h,
+    ),
+    sliver: SliverGrid(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 20.w,
+        mainAxisSpacing: 20.h,
+        childAspectRatio: aspectRatio,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final item = provider.foodItems[index];
+          return FoodItemCard(
+            foodItem: item,
+            onTap: () => context.push(AppRoutes.foodDetail, extra: item),
+          );
+        },
+        childCount: provider.foodItems.length,
+      ),
+    ),
+  );
+}
   Widget _buildFooterSliver(bool isDesktop) {
     return SliverToBoxAdapter(
       child: FoodKingFooter(),
@@ -659,7 +732,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Filters',
+  AppStrings.get('filters'),
                       style: GoogleFonts.poppins(
                         fontSize: 24.sp,
                         fontWeight: FontWeight.w700,
@@ -743,7 +816,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Advanced Filters',
+  AppStrings.get('filters'),
                     style: GoogleFonts.poppins(
                       fontSize: 26.sp,
                       fontWeight: FontWeight.w700,
@@ -767,7 +840,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.r)),
                           ),
                           child: Text(
-                            'Clear All',
+  AppStrings.get('clearAll'),
                             style: GoogleFonts.poppins(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w600,
@@ -787,7 +860,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                             elevation: 0,
                           ),
                           child: Text(
-                            'Apply',
+  AppStrings.get('apply'),
                             style: GoogleFonts.poppins(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w600,
@@ -813,7 +886,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Food Type',
+  AppStrings.get('foodType'),
           style: GoogleFonts.poppins(
             fontSize: 16.sp,
             fontWeight: FontWeight.w600,
@@ -822,7 +895,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
         ),
         SizedBox(height: 16.h),
         _buildCheckboxTile(
-          'Vegetarian',
+  AppStrings.get('vegetarian'),
           Icons.eco_rounded,
           provider.showVegOnly,
           (value) => provider.setVegFilter(value ?? false),
@@ -830,7 +903,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
         ),
         SizedBox(height: 8.h),
         _buildCheckboxTile(
-          'Non-Vegetarian',
+  AppStrings.get('nonVegetarian'),
           Icons.restaurant_rounded,
           provider.showNonVegOnly,
           (value) => provider.setNonVegFilter(value ?? false),
@@ -838,7 +911,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
         ),
         SizedBox(height: 8.h),
         _buildCheckboxTile(
-          'Popular Items',
+  AppStrings.get('popularItems'),
           Icons.local_fire_department_rounded,
           provider.showPopularOnly,
           (value) => provider.setPopularFilter(value ?? false),

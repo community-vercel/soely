@@ -1,3 +1,5 @@
+// lib/features/menu/food_detail_screen.dart - COMPLETE FIX
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,10 +8,13 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:soely/core/constant/app_colors.dart';
 import 'package:soely/core/constant/app_strings.dart';
+import 'package:soely/core/services/language_service.dart';
 import 'package:soely/features/providers/cart_provider.dart';
+import 'package:soely/features/providers/home_provider.dart';
 import '../../../shared/models/food_item.dart';
 import '../../../shared/widgets/custom_button.dart';
 
+/// ✅ FIXED: Reloads item data when language changes
 class FoodDetailScreen extends StatefulWidget {
   final FoodItem foodItem;
 
@@ -19,7 +24,8 @@ class FoodDetailScreen extends StatefulWidget {
   State<FoodDetailScreen> createState() => _FoodDetailScreenState();
 }
 
-class _FoodDetailScreenState extends State<FoodDetailScreen> with SingleTickerProviderStateMixin {
+class _FoodDetailScreenState extends State<FoodDetailScreen> 
+    with SingleTickerProviderStateMixin {
   int _quantity = 1;
   MealSize? _selectedMealSize;
   List<Extra> _selectedExtras = [];
@@ -27,13 +33,22 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> with SingleTickerPr
   final TextEditingController _instructionsController = TextEditingController();
   AnimationController? _animationController;
   Animation<double>? _fadeAnimation;
+  
+  // ✅ CRITICAL: Store current food item that can be updated
+  late FoodItem _currentFoodItem;
+  String _lastLanguage = '';
+  bool _isLoadingLanguageChange = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.foodItem.mealSizes.isNotEmpty) {
-      _selectedMealSize = widget.foodItem.mealSizes.first;
+    _currentFoodItem = widget.foodItem;
+    _lastLanguage = context.read<LanguageService>().currentLanguage;
+    
+    if (_currentFoodItem.mealSizes.isNotEmpty) {
+      _selectedMealSize = _currentFoodItem.mealSizes.first;
     }
+    
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -43,6 +58,75 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> with SingleTickerPr
       curve: Curves.easeInOut,
     );
     _animationController!.forward();
+  }
+
+  /// ✅ CRITICAL: Detect language changes and reload item
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final languageService = context.watch<LanguageService>();
+    final currentLang = languageService.currentLanguage;
+    
+    // Update AppStrings
+    AppStrings.setLanguage(currentLang);
+    
+    // ✅ CRITICAL: Reload item if language changed
+    if (_lastLanguage != currentLang && !_isLoadingLanguageChange) {
+      _lastLanguage = currentLang;
+      _reloadFoodItem(currentLang);
+    }
+  }
+
+  /// ✅ CRITICAL: Fetch fresh item data in new language
+  Future<void> _reloadFoodItem(String newLanguage) async {
+    setState(() {
+      _isLoadingLanguageChange = true;
+    });
+
+    try {
+      final homeProvider = context.read<HomeProvider>();
+      final response = await homeProvider.getFoodItem(_currentFoodItem.id);
+      
+      if (response.isSuccess && response.data != null) {
+        if (mounted) {
+          setState(() {
+            _currentFoodItem = response.data!;
+            _isLoadingLanguageChange = false;
+            
+            // ✅ Reset selections to match new language data
+            if (_currentFoodItem.mealSizes.isNotEmpty) {
+              // Try to keep same selection by matching ID
+              final previousSizeId = _selectedMealSize?.id;
+              _selectedMealSize = _currentFoodItem.mealSizes.firstWhere(
+                (size) => size.id == previousSizeId,
+                orElse: () => _currentFoodItem.mealSizes.first,
+              );
+            }
+            
+            // Update extras
+            final previousExtraIds = _selectedExtras.map((e) => e.id).toList();
+            _selectedExtras = _currentFoodItem.extras
+                .where((extra) => previousExtraIds.contains(extra.id))
+                .toList();
+            
+            // Update addons
+            final previousAddonIds = _selectedAddons.map((a) => a.id).toList();
+            _selectedAddons = _currentFoodItem.addons
+                .where((addon) => previousAddonIds.contains(addon.id))
+                .toList();
+          });
+          
+        
+        }
+      }
+    } catch (e) {
+    
+      if (mounted) {
+        setState(() {
+          _isLoadingLanguageChange = false;
+        });
+      }
+    }
   }
 
   @override
@@ -57,9 +141,48 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: _isLargeScreen ? _buildDesktopLayout() : _buildMobileLayout(),
+    return Consumer<LanguageService>(
+      builder: (context, languageService, _) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8F9FA),
+          body: Stack(
+            children: [
+              _isLargeScreen ? _buildDesktopLayout() : _buildMobileLayout(),
+              
+              // ✅ Show loading overlay during language change
+              if (_isLoadingLanguageChange)
+                Container(
+                  color: Colors.black.withOpacity(0.3),
+                  child: Center(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.w),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.primary,
+                              ),
+                            ),
+                            SizedBox(height: 16.h),
+                            Text(
+                              AppStrings.get('loading'),
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -102,56 +225,12 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> with SingleTickerPr
                           opacity: _fadeAnimation!,
                           child: ConstrainedBox(
                             constraints: BoxConstraints(maxWidth: 680.w),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildFoodDetails(),
-                                SizedBox(height: 40.h),
-                                _buildQuantitySelector(),
-                                if (widget.foodItem.mealSizes.isNotEmpty) ...[
-                                  SizedBox(height: 36.h),
-                                  _buildMealSizeOptions(),
-                                ],
-                                if (widget.foodItem.extras.isNotEmpty) ...[
-                                  SizedBox(height: 36.h),
-                                  _buildExtrasSection(),
-                                ],
-                                if (widget.foodItem.addons.isNotEmpty) ...[
-                                  SizedBox(height: 36.h),
-                                  _buildAddonsSection(),
-                                ],
-                                SizedBox(height: 36.h),
-                                _buildSpecialInstructions(),
-                                SizedBox(height: 120.h),
-                              ],
-                            ),
+                            child: _buildContent(),
                           ),
                         )
                       : ConstrainedBox(
                           constraints: BoxConstraints(maxWidth: 680.w),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildFoodDetails(),
-                              SizedBox(height: 40.h),
-                              _buildQuantitySelector(),
-                              if (widget.foodItem.mealSizes.isNotEmpty) ...[
-                                SizedBox(height: 36.h),
-                                _buildMealSizeOptions(),
-                              ],
-                              if (widget.foodItem.extras.isNotEmpty) ...[
-                                SizedBox(height: 36.h),
-                                _buildExtrasSection(),
-                              ],
-                              if (widget.foodItem.addons.isNotEmpty) ...[
-                                SizedBox(height: 36.h),
-                                _buildAddonsSection(),
-                              ],
-                              SizedBox(height: 36.h),
-                              _buildSpecialInstructions(),
-                              SizedBox(height: 120.h),
-                            ],
-                          ),
+                          child: _buildContent(),
                         ),
                 ),
               ),
@@ -172,36 +251,38 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> with SingleTickerPr
           child: _fadeAnimation != null
               ? FadeTransition(
                   opacity: _fadeAnimation!,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildFoodDetails(),
-                      _buildQuantitySelector(),
-                      if (widget.foodItem.mealSizes.isNotEmpty) _buildMealSizeOptions(),
-                      if (widget.foodItem.extras.isNotEmpty) _buildExtrasSection(),
-                      if (widget.foodItem.addons.isNotEmpty) _buildAddonsSection(),
-                      _buildSpecialInstructions(),
-                      SizedBox(height: 16.h),
-                      _buildBottomBar(),
-                      SizedBox(height: 24.h),
-                    ],
-                  ),
+                  child: _buildContent(),
                 )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFoodDetails(),
-                    _buildQuantitySelector(),
-                    if (widget.foodItem.mealSizes.isNotEmpty) _buildMealSizeOptions(),
-                    if (widget.foodItem.extras.isNotEmpty) _buildExtrasSection(),
-                    if (widget.foodItem.addons.isNotEmpty) _buildAddonsSection(),
-                    _buildSpecialInstructions(),
-                    SizedBox(height: 16.h),
-                    _buildBottomBar(),
-                    SizedBox(height: 24.h),
-                  ],
-                ),
+              : _buildContent(),
         ),
+      ],
+    );
+  }
+
+  Widget _buildContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildFoodDetails(),
+        SizedBox(height: _isLargeScreen ? 40.h : 0),
+        _buildQuantitySelector(),
+        if (_currentFoodItem.mealSizes.isNotEmpty) ...[
+          SizedBox(height: _isLargeScreen ? 36.h : 0),
+          _buildMealSizeOptions(),
+        ],
+        if (_currentFoodItem.extras.isNotEmpty) ...[
+          SizedBox(height: _isLargeScreen ? 36.h : 0),
+          _buildExtrasSection(),
+        ],
+        if (_currentFoodItem.addons.isNotEmpty) ...[
+          SizedBox(height: _isLargeScreen ? 36.h : 0),
+          _buildAddonsSection(),
+        ],
+        SizedBox(height: _isLargeScreen ? 36.h : 0),
+        _buildSpecialInstructions(),
+        SizedBox(height: _isLargeScreen ? 120.h : 16.h),
+        if (!_isLargeScreen) _buildBottomBar(),
+        if (!_isLargeScreen) SizedBox(height: 24.h),
       ],
     );
   }
@@ -239,24 +320,27 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> with SingleTickerPr
     );
   }
 
- 
-Widget _buildImageSection() {
+  Widget _buildImageSection() {
     return Container(
       width: double.infinity,
       height: double.infinity,
       child: Hero(
-        tag: 'food_${widget.foodItem.id}',
+        tag: 'food_${_currentFoodItem.id}',
         child: kIsWeb
             ? Image.network(
-                widget.foodItem.imageUrl,
+                _currentFoodItem.imageUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: const Color(0xFFF0F0F0),
-                  child: Icon(Icons.restaurant_rounded, size: 80.sp, color: Colors.grey[400]),
+                  child: Icon(
+                    Icons.restaurant_rounded,
+                    size: 80.sp,
+                    color: Colors.grey[400],
+                  ),
                 ),
               )
             : CachedNetworkImage(
-                imageUrl: widget.foodItem.imageUrl,
+                imageUrl: _currentFoodItem.imageUrl,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
                   color: const Color(0xFFF0F0F0),
@@ -268,11 +352,14 @@ Widget _buildImageSection() {
                 ),
                 errorWidget: (context, url, error) => Container(
                   color: const Color(0xFFF0F0F0),
-                  child: Icon(Icons.restaurant_rounded, size: 80.sp, color: Colors.grey[400]),
+                  child: Icon(
+                    Icons.restaurant_rounded,
+                    size: 80.sp,
+                    color: Colors.grey[400],
+                  ),
                 ),
               ),
       ),
-      
     );
   }
 
@@ -328,9 +415,13 @@ Widget _buildImageSection() {
       ),
     );
   }
- Widget _buildFoodDetails() {
+
+  Widget _buildFoodDetails() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: _isLargeScreen ? 0 : 20.w, vertical: _isLargeScreen ? 0 : 24.h),
+      padding: EdgeInsets.symmetric(
+        horizontal: _isLargeScreen ? 0 : 20.w,
+        vertical: _isLargeScreen ? 0 : 24.h,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -340,14 +431,18 @@ Widget _buildImageSection() {
               Container(
                 padding: EdgeInsets.all(6.w),
                 decoration: BoxDecoration(
-                  color: widget.foodItem.isVeg 
-                      ? Colors.green.withOpacity(0.1) 
+                  color: _currentFoodItem.isVeg
+                      ? Colors.green.withOpacity(0.1)
                       : Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Icon(
-                  widget.foodItem.isVeg ? Icons.eco_rounded : Icons.restaurant_rounded,
-                  color: widget.foodItem.isVeg ? Colors.green[700] : Colors.red[700],
+                  _currentFoodItem.isVeg 
+                      ? Icons.eco_rounded 
+                      : Icons.restaurant_rounded,
+                  color: _currentFoodItem.isVeg 
+                      ? Colors.green[700] 
+                      : Colors.red[700],
                   size: _isLargeScreen ? 18.sp : 16.sp,
                 ),
               ),
@@ -356,8 +451,9 @@ Widget _buildImageSection() {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ✅ FIXED: Now uses _currentFoodItem which updates on language change
                     Text(
-                      widget.foodItem.name,
+                      _currentFoodItem.name,
                       style: TextStyle(
                         fontSize: _isLargeScreen ? 36.sp : 28.sp,
                         fontWeight: FontWeight.w700,
@@ -367,9 +463,12 @@ Widget _buildImageSection() {
                       ),
                     ),
                     SizedBox(height: 12.h),
-                    if (widget.foodItem.rating > 0)
+                    if (_currentFoodItem.rating > 0)
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: 6.h,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.amber.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(20.r),
@@ -384,7 +483,7 @@ Widget _buildImageSection() {
                             ),
                             SizedBox(width: 6.w),
                             Text(
-                              '${widget.foodItem.rating}',
+                              '${_currentFoodItem.rating}',
                               style: TextStyle(
                                 fontSize: _isLargeScreen ? 15.sp : 13.sp,
                                 fontWeight: FontWeight.w600,
@@ -393,7 +492,7 @@ Widget _buildImageSection() {
                             ),
                             SizedBox(width: 4.w),
                             Text(
-                              '(${widget.foodItem.reviewCount})',
+                              '(${_currentFoodItem.reviewCount})',
                               style: TextStyle(
                                 fontSize: _isLargeScreen ? 14.sp : 12.sp,
                                 color: AppColors.textMedium,
@@ -408,8 +507,9 @@ Widget _buildImageSection() {
             ],
           ),
           SizedBox(height: _isLargeScreen ? 20.h : 16.h),
+          // ✅ FIXED: Description also updates
           Text(
-            widget.foodItem.description,
+            _currentFoodItem.description,
             style: TextStyle(
               fontSize: _isLargeScreen ? 17.sp : 15.sp,
               color: AppColors.textMedium,
@@ -433,7 +533,7 @@ Widget _buildImageSection() {
             child: Row(
               children: [
                 Text(
-                  widget.foodItem.hasActiveOffer ? 'Offer Price' : 'Starting from',
+                  AppStrings.get('total'),
                   style: TextStyle(
                     fontSize: _isLargeScreen ? 15.sp : 13.sp,
                     color: AppColors.textMedium,
@@ -444,9 +544,9 @@ Widget _buildImageSection() {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    if (widget.foodItem.hasActiveOffer) ...[
+                    if (_currentFoodItem.hasActiveOffer) ...[
                       Text(
-                        '${AppStrings.currency}${widget.foodItem.price.toStringAsFixed(2)}',
+                        '${AppStrings.get('currency')}${_currentFoodItem.price.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontSize: _isLargeScreen ? 18.sp : 16.sp,
                           color: AppColors.textLight,
@@ -456,7 +556,7 @@ Widget _buildImageSection() {
                       SizedBox(height: 4.h),
                     ],
                     Text(
-                      '${AppStrings.currency}${widget.foodItem.effectivePrice.toStringAsFixed(2)}',
+                      '${AppStrings.get('currency')}${_currentFoodItem.effectivePrice.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: _isLargeScreen ? 28.sp : 24.sp,
                         fontWeight: FontWeight.w800,
@@ -473,6 +573,7 @@ Widget _buildImageSection() {
       ),
     );
   }
+
   Widget _buildQuantitySelector() {
     return Container(
       padding: EdgeInsets.all(_isLargeScreen ? 0 : 20.w),
@@ -480,7 +581,7 @@ Widget _buildImageSection() {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppStrings.quantity,
+            AppStrings.get('quantity'),
             style: TextStyle(
               fontSize: _isLargeScreen ? 22.sp : 20.sp,
               fontWeight: FontWeight.w700,
@@ -574,7 +675,7 @@ Widget _buildImageSection() {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppStrings.mealSize,
+            AppStrings.get('mealSize'),
             style: TextStyle(
               fontSize: _isLargeScreen ? 22.sp : 20.sp,
               fontWeight: FontWeight.w700,
@@ -601,78 +702,79 @@ Widget _buildImageSection() {
     );
   }
 
-Widget _buildMealSizeOption(MealSize size) {
-  final isSelected = _selectedMealSize?.id == size.id;
+  Widget _buildMealSizeOption(MealSize size) {
+    final isSelected = _selectedMealSize?.id == size.id;
 
-  return Padding(
-    padding: EdgeInsets.only(bottom: 12.h),
-    child: InkWell(
-      onTap: () => setState(() => _selectedMealSize = size),
-      borderRadius: BorderRadius.circular(14.r),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.grey[50],
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey[300]!,
-            width: 2,
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12.h),
+      child: InkWell(
+        onTap: () => setState(() => _selectedMealSize = size),
+        borderRadius: BorderRadius.circular(14.r),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            color: isSelected 
+                ? AppColors.primary.withOpacity(0.1) 
+                : Colors.grey[50],
+            borderRadius: BorderRadius.circular(14.r),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : Colors.grey[300]!,
+              width: 2,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : [],
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.2),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : [],
-        ),
-        child: Row(
-          children: [
-            Radio<MealSize>(
-              value: size,
-              groupValue: _selectedMealSize,
-              onChanged: (value) => setState(() => _selectedMealSize = value),
-              activeColor: AppColors.primary,
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Text(
-                size.name,
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? AppColors.primary : AppColors.textDark,
-                ),
+          child: Row(
+            children: [
+              Radio<MealSize>(
+                value: size,
+                groupValue: _selectedMealSize,
+                onChanged: (value) => setState(() => _selectedMealSize = value),
+                activeColor: AppColors.primary,
               ),
-            ),
-            if (size.additionalPrice != 0)
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary : Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
+              SizedBox(width: 12.w),
+              Expanded(
                 child: Text(
-                  '${size.additionalPrice > 0 ? '+' : ''}${AppStrings.currency}${size.additionalPrice.abs().toStringAsFixed(2)}',
+                  size.name,
                   style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected ? Colors.white : AppColors.primary,
+                    fontSize: 16.sp,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? AppColors.primary : AppColors.textDark,
                   ),
                 ),
               ),
-          ],
+              if (size.additionalPrice != 0)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.primary : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    '${size.additionalPrice > 0 ? '+' : ''}${AppStrings.get('currency')}${size.additionalPrice.abs().toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? Colors.white : AppColors.primary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
- 
   Widget _buildExtrasSection() {
     return Container(
       padding: EdgeInsets.all(_isLargeScreen ? 0 : 20.w),
@@ -680,7 +782,7 @@ Widget _buildMealSizeOption(MealSize size) {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppStrings.extras,
+            AppStrings.get('extras'),
             style: TextStyle(
               fontSize: _isLargeScreen ? 22.sp : 20.sp,
               fontWeight: FontWeight.w700,
@@ -727,9 +829,13 @@ Widget _buildMealSizeOption(MealSize size) {
           margin: EdgeInsets.only(bottom: 12.h),
           padding: EdgeInsets.all(_isLargeScreen ? 20.w : 18.w),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
+            color: isSelected 
+                ? AppColors.primary.withOpacity(0.08) 
+                : Colors.white,
             border: Border.all(
-              color: isSelected ? AppColors.primary : AppColors.border.withOpacity(0.5),
+              color: isSelected 
+                  ? AppColors.primary 
+                  : AppColors.border.withOpacity(0.5),
               width: isSelected ? 2 : 1,
             ),
             borderRadius: BorderRadius.circular(_isLargeScreen ? 16.r : 14.r),
@@ -763,7 +869,11 @@ Widget _buildMealSizeOption(MealSize size) {
                   color: isSelected ? AppColors.primary : Colors.transparent,
                 ),
                 child: isSelected
-                    ? Icon(Icons.check_rounded, size: 16.sp, color: Colors.white)
+                    ? Icon(
+                        Icons.check_rounded,
+                        size: 16.sp,
+                        color: Colors.white,
+                      )
                     : null,
               ),
               SizedBox(width: 14.w),
@@ -780,11 +890,13 @@ Widget _buildMealSizeOption(MealSize size) {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary : AppColors.primary.withOpacity(0.1),
+                  color: isSelected 
+                      ? AppColors.primary 
+                      : AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Text(
-                  '${AppStrings.currency}${extra.price.toStringAsFixed(2)}',
+                  '${AppStrings.get('currency')}${extra.price.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontSize: _isLargeScreen ? 15.sp : 14.sp,
                     fontWeight: FontWeight.w700,
@@ -813,7 +925,7 @@ Widget _buildMealSizeOption(MealSize size) {
           Padding(
             padding: EdgeInsets.only(right: _isLargeScreen ? 0 : 20.w),
             child: Text(
-              AppStrings.addons,
+              AppStrings.get('addons'),
               style: TextStyle(
                 fontSize: _isLargeScreen ? 22.sp : 20.sp,
                 fontWeight: FontWeight.w700,
@@ -841,6 +953,7 @@ Widget _buildMealSizeOption(MealSize size) {
     );
   }
 
+ 
   Widget _buildAddonCard(Addon addon) {
     final isSelected = _selectedAddons.any((a) => a.id == addon.id);
     return Material(
@@ -1011,7 +1124,7 @@ Widget _buildMealSizeOption(MealSize size) {
                 color: AppColors.textDark,
               ),
               decoration: InputDecoration(
-                hintText: 'Add any special instructions here...',
+                hintText:    AppStrings.get('specialInstructions'),
                 hintStyle: TextStyle(
                   fontSize: _isLargeScreen ? 16.sp : 14.sp,
                   color: AppColors.textLight,
@@ -1075,7 +1188,7 @@ Widget _buildDesktopBottomBar() {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Total Amount',
+                    AppStrings.get('totalAmount'),
                   style: TextStyle(
                     fontSize: 14.sp,
                     color: AppColors.textMedium,

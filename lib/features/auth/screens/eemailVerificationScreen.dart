@@ -1,17 +1,17 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:soely/core/constant/app_colors.dart';
-import 'package:soely/core/routes/app_routes.dart';
-import 'package:soely/features/providers/auth_proveder.dart';
-import 'package:soely/shared/widgets/custom_button.dart';
+import 'package:soely/core/constant/app_strings.dart';
+import 'dart:async';
+import '../../../core/constant/app_colors.dart';
+import '../../../core/routes/app_routes.dart';
+import '../../providers/auth_proveder.dart';
+import '../../../shared/widgets/custom_button.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String email;
-  
+
   const OTPVerificationScreen({
     super.key,
     required this.email,
@@ -22,174 +22,142 @@ class OTPVerificationScreen extends StatefulWidget {
 }
 
 class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
-  final List<TextEditingController> _controllers = List.generate(
+  final List<TextEditingController> _otpControllers = List.generate(
     6,
     (index) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(
-    6,
-    (index) => FocusNode(),
-  );
-
-  bool _isVerifying = false;
-  bool _isResending = false;
-  int _resendCountdown = 0;
+  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  
   Timer? _timer;
+  int _remainingSeconds = 600; // 10 minutes
+  bool _canResend = false;
 
   @override
   void initState() {
     super.initState();
-    _startResendTimer();
+    _startTimer();
   }
 
   @override
   void dispose() {
-    for (var controller in _controllers) {
+    _timer?.cancel();
+    for (var controller in _otpControllers) {
       controller.dispose();
     }
     for (var node in _focusNodes) {
       node.dispose();
     }
-    _timer?.cancel();
     super.dispose();
   }
 
-  void _startResendTimer() {
-    setState(() {
-      _resendCountdown = 60;
-    });
-
+  void _startTimer() {
+    _remainingSeconds = 600; // 10 minutes
+    _canResend = false;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_resendCountdown > 0) {
+      if (_remainingSeconds > 0) {
         setState(() {
-          _resendCountdown--;
+          _remainingSeconds--;
         });
       } else {
+        setState(() {
+          _canResend = true;
+        });
         timer.cancel();
       }
     });
   }
 
+  String _getFormattedTime() {
+    final minutes = (_remainingSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (_remainingSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  String _getOTP() {
+    return _otpControllers.map((controller) => controller.text).join();
+  }
+
+  bool _isOTPComplete() {
+    return _getOTP().length == 6;
+  }
+
+  void _clearOTP() {
+    for (var controller in _otpControllers) {
+      controller.clear();
+    }
+    _focusNodes[0].requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isWebMobile = screenWidth < 600;
-    
+    final isLargeScreen = screenWidth > 600;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          onPressed: () => context.go(AppRoutes.login),
+          onPressed: () {
+            if (GoRouter.of(context).canPop()) {
+              context.pop();
+            } else {
+              context.go(AppRoutes.login);
+            }
+          },
           icon: Icon(
             Icons.arrow_back_ios,
             color: AppColors.textDark,
-            size: isWebMobile ? 18 : 20.sp,
+            size: 20.sp,
           ),
         ),
       ),
       body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: isWebMobile ? 20 : 24.w,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isLargeScreen ? 500 : double.infinity,
             ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: isWebMobile ? screenWidth : 500,
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: isLargeScreen ? 40.w : 24.w,
               ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Icon
-                  Container(
-                    width: isWebMobile ? 100 : 120.w,
-                    height: isWebMobile ? 100 : 120.w,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary,
-                          AppColors.primary.withOpacity(0.7),
-                        ],
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.lock_outline,
-                      size: isWebMobile ? 50 : 60.sp,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: isWebMobile ? 30 : 40.h),
+                  SizedBox(height: isLargeScreen ? 40.h : 20.h),
                   
-                  // Title
-                  Text(
-                    'Verify Your Email',
-                    style: TextStyle(
-                      fontSize: isWebMobile ? 24 : 28.sp,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: isWebMobile ? 12 : 16.h),
-                  
-                  // Description
-                  Text(
-                    'We\'ve sent a 6-digit verification code to',
-                    style: TextStyle(
-                      fontSize: isWebMobile ? 14 : 16.sp,
-                      color: AppColors.textLight,
-                      height: 1.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: isWebMobile ? 6 : 8.h),
-                  
-                  // Email
-                  Text(
-                    widget.email,
-                    style: TextStyle(
-                      fontSize: isWebMobile ? 14 : 16.sp,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: isWebMobile ? 30 : 40.h),
+                  // Header with Icon
+                  _buildHeader(),
+                  SizedBox(height: isLargeScreen ? 60.h : 40.h),
                   
                   // OTP Input Fields
-                  _buildOTPFields(isWebMobile),
-                  SizedBox(height: isWebMobile ? 24 : 32.h),
+                  _buildOTPFields(),
+                  SizedBox(height: 24.h),
+                  
+                  // Timer
+                  _buildTimer(),
+                  SizedBox(height: 32.h),
                   
                   // Verify Button
-                  CustomButton(
-                    text: 'Verify Email',
-                    isLoading: _isVerifying,
-                    onPressed: _handleVerifyOTP,
+                  Consumer<AuthProvider>(
+                    builder: (context, authProvider, child) {
+                      return CustomButton(
+                        text: 'Verify Email',
+                        isLoading: authProvider.isLoading,
+                        onPressed: _isOTPComplete()
+                            ? () => _handleVerify(context, authProvider)
+                            : null,
+                      );
+                    },
                   ),
-                  SizedBox(height: isWebMobile ? 20 : 24.h),
+                  SizedBox(height: 24.h),
                   
                   // Resend OTP
-                  _buildResendSection(isWebMobile),
-                  SizedBox(height: isWebMobile ? 12 : 16.h),
-                  
-                  // Back to Login
-                  TextButton(
-                    onPressed: () => context.go(AppRoutes.login),
-                    child: Text(
-                      'Back to Login',
-                      style: TextStyle(
-                        fontSize: isWebMobile ? 13 : 14.sp,
-                        color: AppColors.textMedium,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20),
+                  _buildResendButton(),
+                  SizedBox(height: isLargeScreen ? 60.h : 40.h),
                 ],
               ),
             ),
@@ -199,72 +167,116 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     );
   }
 
-  Widget _buildOTPFields(bool isWebMobile) {
-    final boxSize = isWebMobile ? 45.0 : 50.w;
-    final boxHeight = isWebMobile ? 52.0 : 60.h;
-    final fontSize = isWebMobile ? 20.0 : 24.sp;
-    
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        Container(
+          width: 100.w,
+          height: 100.w,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.email_outlined,
+            size: 50.sp,
+            color: AppColors.primary,
+          ),
+        ),
+        SizedBox(height: 24.h),
+        Text(
+  AppStrings.get('verifyYourEmail'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 28.sp,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textDark,
+            height: 1.2,
+          ),
+        ),
+        SizedBox(height: 12.h),
+        Text(
+  AppStrings.get('sentVerificationCode'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16.sp,
+            color: AppColors.textLight,
+            height: 1.4,
+          ),
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          widget.email,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16.sp,
+            color: AppColors.primary,
+            fontWeight: FontWeight.w600,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOTPFields() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: List.generate(6, (index) {
         return SizedBox(
-          width: boxSize,
-          height: boxHeight,
+          width: 50.w,
+          height: 60.h,
           child: TextField(
-            controller: _controllers[index],
+            controller: _otpControllers[index],
             focusNode: _focusNodes[index],
             textAlign: TextAlign.center,
             keyboardType: TextInputType.number,
             maxLength: 1,
             style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w700,
+              fontSize: 24.sp,
+              fontWeight: FontWeight.w600,
               color: AppColors.textDark,
             ),
             decoration: InputDecoration(
               counterText: '',
               filled: true,
-              fillColor: AppColors.primary.withOpacity(0.05),
-              contentPadding: EdgeInsets.zero,
+              fillColor: AppColors.background,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(isWebMobile ? 10 : 12.r),
+                borderRadius: BorderRadius.circular(12.r),
                 borderSide: BorderSide(
-                  color: AppColors.primary.withOpacity(0.2),
-                  width: 2,
+                  color: AppColors.border,
+                  width: 1.5,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(isWebMobile ? 10 : 12.r),
+                borderRadius: BorderRadius.circular(12.r),
                 borderSide: BorderSide(
-                  color: AppColors.primary.withOpacity(0.2),
-                  width: 2,
+                  color: AppColors.border,
+                  width: 1.5,
                 ),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(isWebMobile ? 10 : 12.r),
+                borderRadius: BorderRadius.circular(12.r),
                 borderSide: BorderSide(
                   color: AppColors.primary,
                   width: 2,
                 ),
               ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(
+                  color: AppColors.error,
+                  width: 1.5,
+                ),
+              ),
             ),
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-            ],
             onChanged: (value) {
               if (value.isNotEmpty && index < 5) {
                 _focusNodes[index + 1].requestFocus();
-              }
-              if (value.isEmpty && index > 0) {
+              } else if (value.isEmpty && index > 0) {
                 _focusNodes[index - 1].requestFocus();
               }
-              
-              if (index == 5 && value.isNotEmpty) {
-                String otp = _controllers.map((c) => c.text).join();
-                if (otp.length == 6) {
-                  _handleVerifyOTP();
-                }
-              }
+              setState(() {}); // Update button state
             },
           ),
         );
@@ -272,177 +284,141 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     );
   }
 
-  Widget _buildResendSection(bool isWebMobile) {
-    return Column(
-      children: [
-        Text(
-          'Didn\'t receive the code?',
-          style: TextStyle(
-            fontSize: isWebMobile ? 13 : 14.sp,
-            color: AppColors.textMedium,
+  Widget _buildTimer() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      decoration: BoxDecoration(
+        color: _canResend 
+            ? AppColors.error.withOpacity(0.1)
+            : AppColors.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _canResend ? Icons.access_time : Icons.timer_outlined,
+            size: 20.sp,
+            color: _canResend ? AppColors.error : AppColors.primary,
           ),
-        ),
-        SizedBox(height: isWebMobile ? 6 : 8.h),
-        if (_resendCountdown > 0)
+          SizedBox(width: 8.w),
           Text(
-            'Resend code in ${_resendCountdown}s',
+            _canResend     ? AppStrings.get('codeExpired') 
+    : AppStrings.get('codeExpiresIn').replaceAll('{time}', _getFormattedTime()),
             style: TextStyle(
-              fontSize: isWebMobile ? 13 : 14.sp,
-              color: AppColors.textLight,
+              fontSize: 14.sp,
+              color: _canResend ? AppColors.error : AppColors.primary,
               fontWeight: FontWeight.w600,
             ),
-          )
-        else
-          TextButton(
-            onPressed: _isResending ? null : _handleResendOTP,
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.symmetric(
-                horizontal: isWebMobile ? 16 : 20,
-                vertical: isWebMobile ? 8 : 10,
-              ),
-            ),
-            child: _isResending
-                ? SizedBox(
-                    width: isWebMobile ? 18 : 20.w,
-                    height: isWebMobile ? 18 : 20.h,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primary,
-                      ),
-                    ),
-                  )
-                : Text(
-                    'Resend Code',
-                    style: TextStyle(
-                      fontSize: isWebMobile ? 14 : 16.sp,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
           ),
-      ],
+        ],
+      ),
     );
   }
 
-  Future<void> _handleVerifyOTP() async {
-    String otp = _controllers.map((c) => c.text).join();
-    
-    if (otp.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter all 6 digits'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+  Widget _buildResendButton() {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return TextButton(
+          onPressed: (_canResend && !authProvider.isLoading)
+              ? () => _handleResend(context, authProvider)
+              : null,
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: AppColors.textMedium,
+              ),
+              children: [
+        TextSpan(text: AppStrings.get('didntReceiveCode')),
+                TextSpan(
+  text: AppStrings.resend,
+                  style: TextStyle(
+                    color: (_canResend && !authProvider.isLoading)
+                        ? AppColors.primary
+                        : AppColors.textLight,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isVerifying = true;
-    });
-
-    try {
-      final authProvider = context.read<AuthProvider>();
-      final success = await authProvider.verifyOTP(widget.email, otp);
-
-      if (mounted) {
-        if (success) {
-          context.go(AppRoutes.home);
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Email verified successfully!'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              margin: const EdgeInsets.all(16),
-            ),
-          );
-        } else {
-          for (var controller in _controllers) {
-            controller.clear();
-          }
-          _focusNodes[0].requestFocus();
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authProvider.error ?? 'Invalid or expired OTP'),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              margin: const EdgeInsets.all(16),
-            ),
-          );
-        }
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isVerifying = false;
-        });
-      }
-    }
+        );
+      },
+    );
   }
 
-  Future<void> _handleResendOTP() async {
-    setState(() {
-      _isResending = true;
-    });
+  Future<void> _handleVerify(BuildContext context, AuthProvider authProvider) async {
+    final otp = _getOTP();
+    
+    final success = await authProvider.verifyOTP(widget.email, otp);
 
-    try {
-      final authProvider = context.read<AuthProvider>();
-      final success = await authProvider.resendOTP(widget.email);
+  if (success && mounted) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(AppStrings.get('emailVerifiedSuccess')),
+      backgroundColor: Colors.green,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      margin: EdgeInsets.all(16.w),
+      duration: const Duration(seconds: 2),
+    ),
+  );
+  context.go(AppRoutes.home);
+} else if (mounted) {
+  _clearOTP();
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        authProvider.error ?? AppStrings.get('invalidOrExpiredOTP'),
+      ),
+      backgroundColor: AppColors.error,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      margin: EdgeInsets.all(16.w),
+      duration: const Duration(seconds: 4),
+    ),
+  );
+}
+  }
 
-      if (mounted) {
-        if (success) {
-          _startResendTimer();
-          
-          for (var controller in _controllers) {
-            controller.clear();
-          }
-          _focusNodes[0].requestFocus();
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('OTP sent successfully!'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              margin: const EdgeInsets.all(16),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authProvider.error ?? 'Failed to send OTP'),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              margin: const EdgeInsets.all(16),
-            ),
-          );
-        }
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isResending = false;
-        });
-      }
-    }
+  Future<void> _handleResend(BuildContext context, AuthProvider authProvider) async {
+    final success = await authProvider.resendOTP(widget.email);
+
+if (success && mounted) {
+  _clearOTP();
+  _startTimer();
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(AppStrings.get('newCodeSent')),
+      backgroundColor: Colors.green,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      margin: EdgeInsets.all(16.w),
+      duration: const Duration(seconds: 3),
+    ),
+  );
+} else if (mounted) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        authProvider.error ?? AppStrings.get('failedToSendCode'),
+      ),
+      backgroundColor: AppColors.error,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      margin: EdgeInsets.all(16.w),
+      duration: const Duration(seconds: 4),
+    ),
+  );
+}
   }
 }

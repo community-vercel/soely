@@ -47,7 +47,7 @@ class FoodItemCard extends StatelessWidget {
         final isWeb = screenWidth >= 600;
         
         return GestureDetector(
-          onTap: onTap,
+          onTap: onTap ,
           child: _buildVerticalCard(context, constraints, screenWidth, isWeb),
         );
       },
@@ -58,21 +58,13 @@ class FoodItemCard extends StatelessWidget {
     final cardSize = _getCardSize(constraints);
     final isExtraSmall = cardSize == CardSize.extraSmall;
     final isSmall = cardSize == CardSize.small || cardSize == CardSize.extraSmall;
+final isOutOfStock = AppStrings.get('outOfStock');
+
 
     return Container(
       margin: EdgeInsets.symmetric(
-        horizontal: _getResponsiveValue(
-          mobile: 4,
-          tablet: 6,
-          desktop: 8,
-          screenWidth: screenWidth,
-        ).w,
-        vertical: _getResponsiveValue(
-          mobile: 4,
-          tablet: 6,
-          desktop: 8,
-          screenWidth: screenWidth,
-        ).h,
+        horizontal: _getResponsiveValue(mobile: 4, tablet: 6, desktop: 8, screenWidth: screenWidth).w,
+        vertical: _getResponsiveValue(mobile: 4, tablet: 6, desktop: 8, screenWidth: screenWidth).h,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -84,24 +76,26 @@ class FoodItemCard extends StatelessWidget {
             offset: Offset(0, 2.h),
           ),
         ],
-        border: isWeb ? Border.all(
-          color: Colors.grey.withOpacity(0.1),
-          width: 1,
-        ) : null,
+        border: isWeb ? Border.all(color: Colors.grey.withOpacity(0.1), width: 1) : null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(_getBorderRadius(cardSize, screenWidth)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            Expanded(
-              flex: isExtraSmall ? 3 : (isSmall ? 3 : 4),
-              child: _buildImageSection(cardSize, screenWidth),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: isExtraSmall ? 3 : (isSmall ? 3 : 4),
+                  child: _buildImageSection(cardSize, screenWidth),
+                ),
+                Expanded(
+                  flex: isExtraSmall ? 4 : (isSmall ? 3 : 3),
+                  child: _buildDetailsSection(cardSize, screenWidth, isWeb, context),
+                ),
+              ],
             ),
-            Expanded(
-              flex: isExtraSmall ? 4 : (isSmall ? 3 : 3),
-              child: _buildDetailsSection(cardSize, screenWidth, isWeb, context),
-            ),
+         
           ],
         ),
       ),
@@ -111,6 +105,8 @@ class FoodItemCard extends StatelessWidget {
   Widget _buildDetailsSection(CardSize cardSize, double screenWidth, bool isWeb, BuildContext context) {
     final isExtraSmall = cardSize == CardSize.extraSmall;
     final padding = _getPadding(cardSize, screenWidth);
+final isOutOfStock = AppStrings.get('outOfStock');
+
 
     return Padding(
       padding: EdgeInsets.all(padding),
@@ -120,7 +116,7 @@ class FoodItemCard extends StatelessWidget {
           Flexible(
             child: Text(
               foodItem.name,
-              maxLines: isExtraSmall ? 1 : 2,
+    maxLines: cardSize == CardSize.extraSmall ? 2 : 2, // Allow 2 lines for extraSmall
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: _getTitleFontSize(cardSize, screenWidth),
@@ -201,8 +197,6 @@ class FoodItemCard extends StatelessWidget {
                       ? foodItem.imageUrl
                       : 'https://picsum.photos/200/200?random=${foodItem.id}',
                   fit: BoxFit.cover,
-                  cacheWidth: 400,
-                  cacheHeight: 400,
                   filterQuality: FilterQuality.medium,
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
@@ -300,7 +294,7 @@ class FoodItemCard extends StatelessWidget {
               ),
             ),
           ),
-        if (foodItem.rating > 0)
+        if (foodItem.rating != null && foodItem.rating! > 0)
           Positioned(
             bottom: _getPadding(cardSize, screenWidth),
             left: _getPadding(cardSize, screenWidth),
@@ -323,7 +317,7 @@ class FoodItemCard extends StatelessWidget {
                   ),
                   SizedBox(width: 4.w),
                   Text(
-                    foodItem.rating.toStringAsFixed(1),
+                    foodItem.rating!.toStringAsFixed(1),
                     style: TextStyle(
                       fontSize: _getSmallFontSize(cardSize, screenWidth),
                       fontWeight: FontWeight.w700,
@@ -352,7 +346,7 @@ class FoodItemCard extends StatelessWidget {
           if (cardSize != CardSize.extraSmall) ...[
             SizedBox(height: 8.h),
             Text(
-              'Image not available',
+  AppStrings.get('imageNotAvailable'),
               style: TextStyle(
                 fontSize: _getSmallFontSize(cardSize, screenWidth),
                 color: AppColors.textLight,
@@ -366,6 +360,8 @@ class FoodItemCard extends StatelessWidget {
   }
 
   void _addToCart(BuildContext context, CartProvider cartProvider) {
+
+
     if (foodItem.mealSizes.isNotEmpty ||
         foodItem.extras.isNotEmpty ||
         foodItem.addons.isNotEmpty) {
@@ -377,8 +373,9 @@ class FoodItemCard extends StatelessWidget {
       cartProvider.addItem(foodItem: foodItemWithDiscount);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${foodItem.name} added to cart'),
-          duration: const Duration(seconds: 2),
+content: Text(
+  AppStrings.get('addedToCart').replaceAll('{itemName}', foodItem.name),
+),          duration: const Duration(seconds: 2),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -386,7 +383,7 @@ class FoodItemCard extends StatelessWidget {
           ),
           margin: EdgeInsets.all(16.w),
           action: SnackBarAction(
-            label: 'Undo',
+  label: AppStrings.get('undo'),
             textColor: Colors.white,
             onPressed: () => cartProvider.removeItem(foodItem.id),
           ),
@@ -403,17 +400,18 @@ class FoodItemCard extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(10.r),
             onTap: () => _addToCart(context, cartProvider),
+
             child: Container(
               padding: EdgeInsets.symmetric(
                 horizontal: _getPadding(cardSize, screenWidth) * 1.2,
                 vertical: _getSmallPadding(cardSize, screenWidth) * 2.2,
               ),
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                color:  AppColors.primary,
                 borderRadius: BorderRadius.circular(10.r),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.25),
+                    color:  AppColors.primary.withOpacity(0.25),
                     blurRadius: 6.r,
                     offset: Offset(0, 2.h),
                   ),
@@ -446,13 +444,7 @@ class FoodItemCard extends StatelessWidget {
   }
 
   double _getBorderRadius(CardSize cardSize, double screenWidth) {
-    final base = _getResponsiveValue(
-      mobile: 12,
-      tablet: 14,
-      desktop: 16,
-      screenWidth: screenWidth,
-    ).r;
-    
+    final base = _getResponsiveValue(mobile: 12, tablet: 14, desktop: 16, screenWidth: screenWidth).r;
     switch (cardSize) {
       case CardSize.extraSmall:
         return (base * 0.8).clamp(8.0, 12.0);
@@ -465,38 +457,26 @@ class FoodItemCard extends StatelessWidget {
     }
   }
 
-  double _getPadding(CardSize cardSize, double screenWidth) {
-    final base = _getResponsiveValue(
-      mobile: 8,
-      tablet: 10,
-      desktop: 12,
-      screenWidth: screenWidth,
-    ).w;
-    
-    switch (cardSize) {
-      case CardSize.extraSmall:
-        return (base * 0.7).clamp(6.0, 8.0);
-      case CardSize.small:
-        return (base * 0.75).clamp(8.0, 10.0);
-      case CardSize.medium:
-        return base.clamp(10.0, 12.0);
-      case CardSize.large:
-        return (base * 1.15).clamp(12.0, 14.0);
-    }
+ double _getPadding(CardSize cardSize, double screenWidth) {
+  final base = _getResponsiveValue(mobile: 8, tablet: 10, desktop: 12, screenWidth: screenWidth).w;
+  switch (cardSize) {
+    case CardSize.extraSmall:
+      return (base * 0.6).clamp(5.0, 7.0); // Reduced padding
+    case CardSize.small:
+      return (base * 0.75).clamp(8.0, 10.0);
+    case CardSize.medium:
+      return base.clamp(10.0, 12.0);
+    case CardSize.large:
+      return (base * 1.15).clamp(12.0, 14.0);
   }
+}
 
   double _getSmallPadding(CardSize cardSize, double screenWidth) {
     return _getPadding(cardSize, screenWidth) * 0.4;
   }
 
   double _getSpacing(CardSize cardSize, double screenWidth) {
-    final base = _getResponsiveValue(
-      mobile: 4,
-      tablet: 6,
-      desktop: 8,
-      screenWidth: screenWidth,
-    ).h;
-    
+    final base = _getResponsiveValue(mobile: 4, tablet: 6, desktop: 8, screenWidth: screenWidth).h;
     switch (cardSize) {
       case CardSize.extraSmall:
         return (base * 0.7).clamp(3.0, 4.0);
@@ -509,73 +489,49 @@ class FoodItemCard extends StatelessWidget {
     }
   }
 
-  double _getTitleFontSize(CardSize cardSize, double screenWidth) {
-    final base = _getResponsiveValue(
-      mobile: 14,
-      tablet: 17,
-      desktop: 18,
-      screenWidth: screenWidth,
-    ).sp;
-
-    switch (cardSize) {
-      case CardSize.extraSmall:
-        return (base * 0.85).clamp(14.0, 15.0);
-      case CardSize.small:
-        return (base * 0.9).clamp(15.0, 16.0);
-      case CardSize.medium:
-        return base.clamp(16.0, 18.0);
-      case CardSize.large:
-        return (base * 1.05).clamp(17.0, 19.0);
-    }
+double _getTitleFontSize(CardSize cardSize, double screenWidth) {
+  final base = _getResponsiveValue(mobile: 14, tablet: 17, desktop: 18, screenWidth: screenWidth).sp;
+  switch (cardSize) {
+    case CardSize.extraSmall:
+      return (base * 0.75).clamp(12.0, 13.0); // Reduced font size
+    case CardSize.small:
+      return (base * 0.9).clamp(14.0, 15.0);
+    case CardSize.medium:
+      return base.clamp(15.0, 17.0);
+    case CardSize.large:
+      return (base * 1.05).clamp(16.0, 18.0);
   }
+}
 
-  double _getDescriptionFontSize(CardSize cardSize, double screenWidth) {
-    final base = _getResponsiveValue(
-      mobile: 12,
-      tablet: 14,
-      desktop: 15,
-      screenWidth: screenWidth,
-    ).sp;
-    return base.clamp(12.0, 15.0);
+double _getDescriptionFontSize(CardSize cardSize, double screenWidth) {
+  final base = _getResponsiveValue(mobile: 12, tablet: 14, desktop: 15, screenWidth: screenWidth).sp;
+  switch (cardSize) {
+    case CardSize.extraSmall:
+      return (base * 0.8).clamp(10.0, 11.0); // Reduced font size
+    case CardSize.small:
+      return (base * 0.9).clamp(11.0, 12.0);
+    case CardSize.medium:
+      return base.clamp(12.0, 14.0);
+    case CardSize.large:
+      return (base * 1.1).clamp(13.0, 15.0);
   }
-
+}
   double _getPriceFontSize(CardSize cardSize, double screenWidth) {
-    final base = _getResponsiveValue(
-      mobile: 14,
-      tablet: 16,
-      desktop: 17,
-      screenWidth: screenWidth,
-    ).sp;
+    final base = _getResponsiveValue(mobile: 14, tablet: 16, desktop: 17, screenWidth: screenWidth).sp;
     return base.clamp(14.0, 17.0);
   }
 
   double _getButtonFontSize(CardSize cardSize, double screenWidth) {
-    final base = _getResponsiveValue(
-      mobile: 14,
-      tablet: 15,
-      desktop: 16,
-      screenWidth: screenWidth,
-    ).sp;
+    final base = _getResponsiveValue(mobile: 14, tablet: 15, desktop: 16, screenWidth: screenWidth).sp;
     return base.clamp(13.0, 15.0);
   }
 
   double _getSmallFontSize(CardSize cardSize, double screenWidth) {
-    return _getResponsiveValue(
-      mobile: 11,
-      tablet: 12,
-      desktop: 13,
-      screenWidth: screenWidth,
-    ).sp;
+    return _getResponsiveValue(mobile: 11, tablet: 12, desktop: 13, screenWidth: screenWidth).sp;
   }
 
   double _getIconSize(CardSize cardSize, double screenWidth) {
-    final base = _getResponsiveValue(
-      mobile: 20,
-      tablet: 22,
-      desktop: 24,
-      screenWidth: screenWidth,
-    ).sp;
-    
+    final base = _getResponsiveValue(mobile: 20, tablet: 22, desktop: 24, screenWidth: screenWidth).sp;
     switch (cardSize) {
       case CardSize.extraSmall:
         return (base * 0.8).clamp(16.0, 20.0);
@@ -589,13 +545,7 @@ class FoodItemCard extends StatelessWidget {
   }
 
   double _getSmallIconSize(CardSize cardSize, double screenWidth) {
-    final base = _getResponsiveValue(
-      mobile: 10,
-      tablet: 11,
-      desktop: 12,
-      screenWidth: screenWidth,
-    ).sp;
-    
+    final base = _getResponsiveValue(mobile: 10, tablet: 11, desktop: 12, screenWidth: screenWidth).sp;
     switch (cardSize) {
       case CardSize.extraSmall:
         return (base * 0.8).clamp(8.0, 10.0);
@@ -613,4 +563,5 @@ enum CardSize {
   extraSmall,
   small,
   medium,
-  large,}
+  large,
+}

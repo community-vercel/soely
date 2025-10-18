@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:soely/core/constant/app_colors.dart';
+import 'package:soely/core/constant/app_strings.dart';
+import 'package:soely/core/routes/app_routes.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class FoodKingFooter extends StatelessWidget {
@@ -13,15 +16,8 @@ class FoodKingFooter extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withOpacity(0.95),
-          ],
-        ),
+      decoration: const BoxDecoration(
+        color: Color(0xFF0A0E27),
       ),
       child: Column(
         children: [
@@ -29,8 +25,8 @@ class FoodKingFooter extends StatelessWidget {
           Container(
             constraints: const BoxConstraints(maxWidth: 1400),
             padding: EdgeInsets.symmetric(
-              vertical: isDesktop ? 80 : (isTablet ? 60 : 48),
-              horizontal: isDesktop ? 80 : (isTablet ? 40 : 24),
+              vertical: isDesktop ? 48 : (isTablet ? 40 : 32),
+              horizontal: isDesktop ? 60 : (isTablet ? 40 : 24),
             ),
             child: isDesktop
                 ? _buildDesktopLayout(context)
@@ -39,39 +35,39 @@ class FoodKingFooter extends StatelessWidget {
                     : _buildMobileLayout(context),
           ),
 
-          // Divider
-          Container(
-            constraints: const BoxConstraints(maxWidth: 1400),
-            padding: const EdgeInsets.symmetric(horizontal: 80),
-            child: Divider(
-              color: Colors.white.withOpacity(0.1),
-              thickness: 1,
-              height: 1,
-            ),
-          ),
-
           // Bottom Bar
           Container(
-            constraints: const BoxConstraints(maxWidth: 1400),
-            padding: EdgeInsets.symmetric(
-              vertical: isDesktop ? 32 : 24,
-              horizontal: isDesktop ? 80 : (isTablet ? 40 : 24),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              border: Border(
+                top: BorderSide(
+                  color: Colors.white.withOpacity(0.05),
+                  width: 1,
+                ),
+              ),
             ),
-            child: isDesktop
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildCopyright(),
-                      _buildPaymentMethods(),
-                    ],
-                  )
-                : Column(
-                    children: [
-                      _buildPaymentMethods(),
-                      const SizedBox(height: 16),
-                      _buildCopyright(),
-                    ],
-                  ),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 1400),
+              padding: EdgeInsets.symmetric(
+                vertical: 20,
+                horizontal: isDesktop ? 60 : (isTablet ? 40 : 24),
+              ),
+              child: isDesktop
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildCopyright(),
+                        _buildPaymentMethods(),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        _buildCopyright(),
+                        const SizedBox(height: 16),
+                        _buildPaymentMethods(),
+                      ],
+                    ),
+            ),
           ),
         ],
       ),
@@ -82,13 +78,13 @@ class FoodKingFooter extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(flex: 3, child: _buildBrandSection(context)),
+        Expanded(flex: 2, child: _buildBrandSection(context)),
         const SizedBox(width: 60),
-        Expanded(flex: 2, child: _buildQuickLinks(context)),
+        Expanded(child: _buildQuickLinks(context)),
+        const SizedBox(width: 40),
+        Expanded(child: _buildResourcesLinks(context)),
         const SizedBox(width: 60),
-        Expanded(flex: 2, child: _buildResourcesLinks(context)),
-        const SizedBox(width: 60),
-        Expanded(flex: 3, child: _buildContactSection(context)),
+        Expanded(flex: 2, child: _buildContactSection(context)),
       ],
     );
   }
@@ -106,7 +102,7 @@ class FoodKingFooter extends StatelessWidget {
             Expanded(child: _buildResourcesLinks(context)),
           ],
         ),
-        const SizedBox(height: 48),
+        const SizedBox(height: 40),
         _buildContactSection(context),
       ],
     );
@@ -117,11 +113,11 @@ class FoodKingFooter extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildBrandSection(context),
-        const SizedBox(height: 40),
-        _buildQuickLinks(context),
         const SizedBox(height: 32),
+        _buildQuickLinks(context),
+        const SizedBox(height: 28),
         _buildResourcesLinks(context),
-        const SizedBox(height: 40),
+        const SizedBox(height: 32),
         _buildContactSection(context),
       ],
     );
@@ -137,23 +133,23 @@ class FoodKingFooter extends StatelessWidget {
         // Logo
         Image.asset(
           'assets/images/logo3.png',
-          width: isDesktop ? 100 : 80,
-          height: isDesktop ? 100 : 80,
+          width: isDesktop ? 70 : 60,
+          height: isDesktop ? 70 : 60,
           fit: BoxFit.contain,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
         // Description
         Text(
-          'Experiencias culinarias excepcionales que deleitan tus sentidos. Únete a nuestra comunidad gastronómica.',
+          AppStrings.get('brandDescription'),
           style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
-            fontSize: 15,
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 14,
             height: 1.7,
-            letterSpacing: 0.2,
+            fontWeight: FontWeight.w400,
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
 
         // Social Icons
         Row(
@@ -184,18 +180,19 @@ class FoodKingFooter extends StatelessWidget {
       child: GestureDetector(
         onTap: () => _launchURL(url),
         child: Container(
-          width: 44,
-          height: 44,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: Colors.white.withOpacity(0.15),
+              color: AppColors.primary.withOpacity(0.3),
+              width: 1,
             ),
           ),
           child: Icon(
             icon,
-            color: Colors.white,
+            color: AppColors.primary,
             size: 20,
           ),
         ),
@@ -205,33 +202,35 @@ class FoodKingFooter extends StatelessWidget {
 
   Widget _buildQuickLinks(BuildContext context) {
     return _buildFooterSection(
-      'Enlaces Rápidos',
+      context,
+      AppStrings.get('quickLinks'),
       [
-        'Sobre Nosotros',
-        'Nuestro Menú',
-        'Reservaciones',
-        'Galería',
-        'Blog',
-        'Carreras',
+        AppStrings.get('aboutUs'),
+        AppStrings.get('ourMenu'),
+        AppStrings.get('profile'),
+        AppStrings.get('cart'),
       ],
     );
   }
 
   Widget _buildResourcesLinks(BuildContext context) {
     return _buildFooterSection(
-      'Recursos',
+      context,
+      AppStrings.get('resources'),
       [
-        'Contáctanos',
-        'Ayuda y Soporte',
-        'Política de Privacidad',
-        'Términos de Servicio',
-        'Política de Cookies',
-        'FAQ',
+        AppStrings.get('contactUs'),
+        AppStrings.get('helpAndSupport'),
+        AppStrings.get('privacyPolicy'),
+        AppStrings.get('faq'),
       ],
     );
   }
 
-  Widget _buildFooterSection(String title, List<String> links) {
+  Widget _buildFooterSection(
+    BuildContext context,
+    String title,
+    List<String> links,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -239,36 +238,52 @@ class FoodKingFooter extends StatelessWidget {
           title,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
           ),
         ),
-        const SizedBox(height: 24),
-        ...links.map((link) => _buildFooterLink(link)),
+        const SizedBox(height: 20),
+        ...links.map((link) => _buildFooterLink(context, link)),
       ],
     );
   }
 
-  Widget _buildFooterLink(String text) {
+  Widget _buildFooterLink(BuildContext context, String text) {
+    final linkDestinations = {
+      AppStrings.get('aboutUs'): AppRoutes.about,
+      AppStrings.get('ourMenu'): AppRoutes.menu,
+      AppStrings.get('profile'): AppRoutes.profile,
+      AppStrings.get('cart'): AppRoutes.cart,
+      AppStrings.get('contactUs'): 'mailto:info@saborly.es',
+      AppStrings.get('helpAndSupport'): AppRoutes.contact,
+      AppStrings.get('privacyPolicy'): AppRoutes.privacy,
+      AppStrings.get('faq'): AppRoutes.faq,
+    };
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 12),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
-          onTap: () {},
-          child: Row(
-            children: [
-              Text(
-                text,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.75),
-                  fontSize: 15,
-                  height: 1.5,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ],
+          onTap: () {
+            final destination = linkDestinations[text];
+            if (destination != null) {
+              if (destination.startsWith('http') ||
+                  destination.startsWith('mailto') ||
+                  destination.startsWith('tel')) {
+                _launchURL(destination);
+              } else {
+                context.go(destination);
+              }
+            }
+          },
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
       ),
@@ -276,91 +291,80 @@ class FoodKingFooter extends StatelessWidget {
   }
 
   Widget _buildContactSection(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 1200;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Mantente Conectado',
-          style: TextStyle(
+        Text(
+          AppStrings.get('stayConnected'),
+          style: const TextStyle(
             color: Colors.white,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
 
-        // Newsletter
         Text(
-          'Suscríbete para recibir ofertas exclusivas',
+          AppStrings.get('subscribeOffers'),
           style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
-            fontSize: 14,
-            letterSpacing: 0.2,
+            color: Colors.white.withOpacity(0.6),
+            fontSize: 13,
           ),
         ),
         const SizedBox(height: 16),
 
-        // Email Input
+        // Newsletter Input
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+            ),
           ),
           child: Row(
             children: [
               Expanded(
                 child: TextField(
                   style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 15,
+                    color: Colors.white,
+                    fontSize: 14,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Tu correo electrónico',
+                    hintText: AppStrings.get('yourEmail'),
                     hintStyle: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 15,
+                      color: Colors.white.withOpacity(0.4),
+                      fontSize: 14,
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
+                      horizontal: 16,
+                      vertical: 12,
                     ),
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(4),
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6B35),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    'Suscribirse',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.3,
+              Container(
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {},
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
                   ),
                 ),
@@ -368,24 +372,24 @@ class FoodKingFooter extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
 
         // Contact Info
         _buildContactItem(
           Icons.email_outlined,
-          'info@saborly.es',
-          'mailto:info@saborly.es',
+          AppStrings.get('infoEmail'),
+          'mailto:${AppStrings.get('infoEmail')}',
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _buildContactItem(
           Icons.phone_outlined,
-          '+34 932112072',
-          'tel:+34932112072',
+          AppStrings.get('34 932112072'),
+          'tel:${AppStrings.get('34 932112072')}',
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _buildContactItem(
           Icons.location_on_outlined,
-          'Calle Principal 123, Madrid, España',
+          AppStrings.get('address'),
           '',
         ),
       ],
@@ -399,26 +403,19 @@ class FoodKingFooter extends StatelessWidget {
         onTap: url.isNotEmpty ? () => _launchURL(url) : null,
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                color:AppColors.background,
-                size: 18,
-              ),
+            Icon(
+              icon,
+              color: AppColors.primary,
+              size: 18,
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 text,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 15,
-                  letterSpacing: 0.2,
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
             ),
@@ -430,11 +427,10 @@ class FoodKingFooter extends StatelessWidget {
 
   Widget _buildCopyright() {
     return Text(
-      '© ${DateTime.now().year} Saborly. Todos los derechos reservados',
+      '© ${DateTime.now().year} ${AppStrings.get('copyright').replaceAll('© 2025', '').trim()}',
       style: TextStyle(
-        color: Colors.white.withOpacity(0.6),
-        fontSize: 14,
-        letterSpacing: 0.2,
+        color: Colors.white.withOpacity(0.5),
+        fontSize: 13,
       ),
     );
   }
@@ -444,31 +440,34 @@ class FoodKingFooter extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Aceptamos',
+          AppStrings.get('weAccept'),
           style: TextStyle(
-            color: Colors.white.withOpacity(0.6),
+            color: Colors.white.withOpacity(0.5),
             fontSize: 13,
-            letterSpacing: 0.2,
           ),
         ),
-        const SizedBox(width: 16),
-        ...['Visa', 'Mastercard', 'PayPal'].map(
+        const SizedBox(width: 12),
+        ...[
+          AppStrings.get('visa'),
+          AppStrings.get('mastercard'),
+          AppStrings.get('paypal'),
+        ].map(
           (method) => Container(
             margin: const EdgeInsets.only(left: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(4),
               border: Border.all(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withOpacity(0.1),
               ),
             ),
             child: Text(
               method,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -483,5 +482,4 @@ class FoodKingFooter extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-  }
-}
+  }}
